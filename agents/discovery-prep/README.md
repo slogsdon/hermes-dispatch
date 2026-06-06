@@ -7,7 +7,7 @@ one-paragraph "what I want to learn" framing to set intention before the call. S
 
 | | |
 |---|---|
-| **Alias** | `quality` → `qwen3.6:35b-mlx` (21.9 GB) |
+| **Alias** | `max` |
 | **Tools** | none |
 | **Turns** | 1 |
 | **Output** | 3 fixed Markdown sections |
@@ -17,16 +17,16 @@ one-paragraph "what I want to learn" framing to set intention before the call. S
 ```bash
 ./run.sh "Prospect: Acme Payments (Series B fintech). Goal: scope a developer-docs revamp."
 
-cat prospect-brief.md | ./run.sh
+cat prospect-brief.md |./run.sh
 
 # Chain from the researcher:
-./run.sh "Stripe, DevRel lead" | ./../discovery-prep/run.sh
+./run.sh "Stripe, DevRel lead" |./../discovery-prep/run.sh
 ```
 
 ## Why this alias
 
 Sequencing questions for conversational flow and framing call intent is a judgment step, and
-the background must stay factual, so it earns `quality` (qwen3.6:35b-mlx), the strongest
+the background must stay factual, so it earns `max`, the strongest
 local model, which routes its thinking to a separate channel (clean plan, no `strip_think`
 needed). The prompt forces `(inferred)` markers and bans invented facts.
 
@@ -37,9 +37,9 @@ Hermes **desktop** app (or `hermes dashboard` web UI), register it as a profile 
 desktop discovers profiles, not this repo's shell wrappers (see [ARCHITECTURE.md](../ARCHITECTURE.md#2-exposing-agents-in-the-hermes-desktop-app)):
 
 ```bash
-bin/gen-profiles.sh discovery-prep   # materialize the profile (model + persona pinned)
-hermes profile list                  # → discovery-prep appears with model=quality
-hermes desktop                       # pick it as a chat persona
+bin/gen-profiles.sh discovery-prep # materialize the profile (model + persona pinned)
+hermes profile list # → discovery-prep appears with model=quality
+hermes desktop # pick it as a chat persona
 ```
 
 ## Pairs with

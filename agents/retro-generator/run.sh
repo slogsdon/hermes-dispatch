@@ -4,7 +4,7 @@
 #   ./run.sh "Project: client site. Shipped 2 weeks late. Logo assets arrived late..."
 #
 # Output is Obsidian-ready Markdown, pipe it to a file, or hand it to the obsidian skill
-# to create the note (this agent never touches the vault directly, per Shane's rules).
+# to create the note (this agent never touches the vault directly, by design).
 set -euo pipefail
 AGENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 exec "$AGENT_DIR/../../lib/hermes-run.sh" "$AGENT_DIR" "$@"

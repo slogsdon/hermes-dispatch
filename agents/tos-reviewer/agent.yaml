@@ -1,11 +1,6 @@
-# tos-reviewer, fast risk pass on terms of service / vendor agreements
-# Model: quality → qwen3.6:35b-mlx (21.9 GB). Same escalation rationale as pr-reviewer:
-# a contract risk pass is high-stakes, a missed indemnification or IP-assignment clause is
-# real exposure, and granite4.1:8b miscalibrates severity. Legal-adjacent reasoning over long
-# clause-dense text is exactly what the strongest local reasoner is for.
-# qwen3.6 routes thinking to a separate channel, so the project config's show_reasoning:false
-# yields clean output; strip_reasoning + answer_anchor are a belt-and-braces fallback.
-alias: quality
+# tos-reviewer, fast risk pass on terms of service / vendor agreements.
+# Alias: max, max tier, best quality for high-consequence work.
+alias: max
 provider: litellm
 max_turns: 1            # judge once over the pasted terms; no tools, no loop
 toolsets: ""            # the agreement text is pasted/piped in, no fetching

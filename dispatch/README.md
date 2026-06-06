@@ -9,7 +9,7 @@ You (phone)  ->  dispatcher (router + enhancer)  ->  chosen agent  ->  streamed 
 
 ## What it does
 
-1. Layer 1, dispatch. Each message goes to a fast router model (the `pipeline` alias) that picks the best agent, and a capable enhancer model (the `analyze` alias) that rewrites your terse request into a detailed, agent-tuned prompt. It returns `{agent, expanded_prompt, reasoning}`.
+1. Layer 1, dispatch. Each message goes to a fast router model (the `structured` alias) that picks the best agent, and a capable enhancer model (the `reasoning` alias) that rewrites your terse request into a detailed, agent-tuned prompt. It returns `{agent, expanded_prompt, reasoning}`.
 2. Layer 2, execution. The expanded prompt runs against the chosen agent's own system prompt (`profiles/<name>/SOUL.md`) and pinned model, streamed back token by token over SSE.
 
 Output stays clean without re-implementing Hermes' post-processing. Local reasoning models route their chain-of-thought to a separate `reasoning_content` field, so the server streams `delta.content` and ignores `reasoning_content`, plus a defensive inline-`<think>` stripper.
@@ -46,8 +46,8 @@ Open `http://localhost:7777` in a browser, or your Tailscale URL on your phone.
 | `HERMES_DISPATCH_PORT` | `7777` | bind port |
 | `HERMES_HOME` | `~/.hermes` | where `profiles/` and `.env` (LiteLLM key) live |
 | `LITELLM_BASE` | `http://localhost:4000/v1` | LiteLLM proxy base URL |
-| `HERMES_ROUTER_MODEL` | `pipeline` | fast alias that routes and classifies |
-| `HERMES_DISPATCHER_MODEL` | `analyze` | capable alias that expands the prompt |
+| `HERMES_ROUTER_MODEL` | `structured` | fast alias that routes and classifies |
+| `HERMES_DISPATCHER_MODEL` | `reasoning` | capable alias that expands the prompt |
 | `HERMES_DISPATCH_HOME` | `~/.hermes-dispatch` | chat history store |
 | `OBSIDIAN_VAULT` | empty (disabled) | absolute path to enable save-to-vault |
 

@@ -18,15 +18,15 @@ Paste the `models:` block from the `examples/` preset that matches your hardware
 
 ## LiteLLM proxy
 
-LiteLLM is the gateway every alias is served through. Point its config at your backend, mapping each of the 8 `model_name`s (the aliases) to a model. A minimal Ollama-backed LiteLLM `config.yaml`:
+LiteLLM is the gateway every alias is served through. Point its config at your backend, mapping each of the 7 `model_name`s (the aliases) to a model. A minimal Ollama-backed LiteLLM `config.yaml`:
 
 ```yaml
 model_list:
-  - model_name: classify
+  - model_name: fast
     litellm_params: { model: ollama_chat/qwen2.5:1.5b, api_base: http://localhost:11434 }
-  - model_name: quality
+  - model_name: max
     litellm_params: { model: ollama_chat/qwen2.5:32b, api_base: http://localhost:11434 }
-  # one entry per alias: classify, chat, review, code, analyze, pipeline, write, quality
+  # one entry per alias: tiers (fast, balanced, max) + roles (structured, code, writing, reasoning)
 ```
 
 Start it with a master key:

@@ -1,34 +1,35 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Model preset: minimal (one model, all aliases)
 #
-# "I just want to pull ONE model and try everything." Every alias points at the
-# same capable mid-range model. You lose the cost/quality tiering (a 1.2B would
-# triage faster, a 35B would write better), but every agent and pipeline works
-# with a single `ollama pull`.
+# "I just want to pull ONE model and try everything." Every tier and role points at
+# the same capable mid-range model. You lose the cost/quality tiering (a 1.5B would
+# triage faster, a 32B would write better), but every agent and pipeline works with
+# a single `ollama pull`.
 #
 #   ollama pull qwen2.5:14b      # ~9 GB, the one model this preset needs
 #
-# Want it even lighter? Swap every value to `ollama_chat/llama3.1:8b` (~5 GB).
-# Want more quality on a big box? Use `ollama_chat/qwen2.5:32b` (~19 GB).
+# Lighter? Set every value to `ollama_chat/llama3.1:8b` (~5 GB).
+# More headroom? Use `ollama_chat/qwen2.5:32b` (~19 GB).
 #
 # Paste this `models:` block into config.yaml.
 # ─────────────────────────────────────────────────────────────────────────────
 models:
-  classify: "ollama_chat/qwen2.5:14b"
-  chat:     "ollama_chat/qwen2.5:14b"
-  review:   "ollama_chat/qwen2.5:14b"
-  code:     "ollama_chat/qwen2.5:14b"
-  analyze:  "ollama_chat/qwen2.5:14b"
-  pipeline: "ollama_chat/qwen2.5:14b"
-  write:    "ollama_chat/qwen2.5:14b"
-  quality:  "ollama_chat/qwen2.5:14b"
+  # tiers
+  fast:     "ollama_chat/qwen2.5:14b"
+  balanced: "ollama_chat/qwen2.5:14b"
+  max:      "ollama_chat/qwen2.5:14b"
+  # task roles (here, same model as the tiers)
+  structured: "ollama_chat/qwen2.5:14b"
+  code:       "ollama_chat/qwen2.5:14b"
+  writing:    "ollama_chat/qwen2.5:14b"
+  reasoning:  "ollama_chat/qwen2.5:14b"
 
 # Notes
 # -----
 # - qwen2.5:14b has no separate reasoning channel, so output is clean prose with
 #   nothing to strip, a good single-model default for this roster.
-# - The agents tuned for structured JSON (triage-router, seo-tester) still work;
-#   a 14B follows the output contract reliably enough for most inputs.
+# - The agents tuned for structured JSON (triage-router, seo-tester) still work; a
+#   14B follows the output contract reliably enough for most inputs.
 # - When you outgrow this, move to a hardware-tiered preset
 #   (examples/models-m4-apple-silicon.yaml or models-nvidia-24gb.yaml) so the cheap
-#   aliases get cheap models and `quality` gets the big one.
+#   aliases get cheap models and `max` gets the big one.

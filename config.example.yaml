@@ -2,42 +2,45 @@
 # hermes-dispatch configuration template
 #
 # Copy to config.yaml and edit. config.yaml is gitignored (it holds machine-local
-# paths). Every key below has a sane default; only `models` and the optional
-# integrations usually need touching.
+# paths). Only the `models` block usually needs touching.
 #
 #   cp config.example.yaml config.yaml
-#
-# The `models` block is the heart of the project: it maps the 8 abstract aliases
-# every agent uses to concrete backend model strings. Agents NEVER name a
-# model. They name an alias (`quality`, `code`, …), and this table decides what backs it.
-# Pick a preset from examples/ that matches your hardware and paste its `models`
-# block here:
-#
-#   examples/models-m4-apple-silicon.yaml   32 GB unified memory, MLX (the default below)
-#   examples/models-nvidia-24gb.yaml        RTX 3090/4090, CUDA via Ollama
-#   examples/models-cloud.yaml              OpenAI / Anthropic / Groq via LiteLLM
-#   examples/models-minimal.yaml            one model pulled, all aliases point to it
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Model alias → backend model string mapping.
-# Strings are LiteLLM model identifiers. `ollama_chat/<tag>` routes to a local
-# Ollama model through LiteLLM's chat-completions path (use `ollama_chat/`, not
-# `ollama/`, so tool/stop handling is correct). Defaults below are the
-# Apple-Silicon (M4, 32 GB) stack. See examples/ for other hardware.
+# Model aliases: two axes.
+#
+#   TIERS (required)  fast / balanced / max
+#     The capability and cost spine. A consumer only HAS to map these three. Every
+#     agent ultimately resolves to one of them.
+#
+#   TASK ROLES (optional)  structured / code / writing / reasoning
+#     Point a role at its own dedicated model, or leave it "" to INHERIT the default
+#     tier shown in [brackets]. setup.sh and the Docker bootstrap resolve the inherit
+#     (an empty role reuses its tier's model). Set one only when a specialized model
+#     beats the tier for that job (a coder for `code`, a CoT model for `reasoning`).
+#
+# Values are backend model strings (LiteLLM identifiers). For local Ollama use
+# `ollama_chat/<tag>` (the chat path, not `ollama/`). See examples/ for hardware
+# presets and docs/model-configuration.md for the full explanation.
+#
+# Defaults below are the Apple-Silicon (M4, 32 GB) reference stack.
 models:
-  classify: "ollama_chat/lfm2.5-thinking:1.2b"  # tiny, sub-second triage/routing
-  chat:     "ollama_chat/gemma4:e4b-mlx"        # fast conversational, no thinking
-  review:   "ollama_chat/granite4.1:8b"         # code/content review + gating
-  code:     "ollama_chat/qwen3-coder:30b"       # code generation / samples
-  analyze:  "ollama_chat/deepseek-r1:14b"       # reasoning / arithmetic / judgment
-  pipeline: "ollama_chat/lfm2:24b"              # fast structured output, no thinking
-  write:    "ollama_chat/gemma4:26b-mlx"        # long-form prose
-  quality:  "ollama_chat/qwen3.6:35b-mlx"       # best quality, reserved for hard steps
+  # tiers (required)
+  fast:     "ollama_chat/gemma4:e4b-mlx"     # small/quick: triage, routing, extraction, short chat
+  balanced: "ollama_chat/granite4.1:8b"      # mid: solid default for most work
+  max:      "ollama_chat/qwen3.6:35b-mlx"    # largest: best quality, high-consequence work
 
-# LiteLLM proxy: the single gateway every alias is served through.
-# `hermes → LiteLLM (:4000) → backend`. The master key is read from
-# ${hermes_home}/.env (LITELLM_MASTER_KEY); never commit it.
-litellm_url: "http://localhost:4000"
+  # task roles (optional; "" = inherit the [tier] shown)
+  structured: "ollama_chat/lfm2:24b"         # [fast]     fast, reliable structured/JSON output
+  code:       "ollama_chat/qwen3-coder:30b"  # [balanced] code generation
+  writing:    "ollama_chat/gemma4:26b-mlx"   # [balanced] long-form prose
+  reasoning:  "ollama_chat/deepseek-r1:14b"  # [max]      chain-of-thought / analysis
+
+# Gateway: any OpenAI-compatible endpoint. LiteLLM is the reference (it gives the
+# alias→model mapping and unifies local+cloud), but Ollama's native /v1, vLLM, LM
+# Studio, OpenRouter, etc. all work. The master key is read from ${hermes_home}/.env
+# (LITELLM_MASTER_KEY); never commit it.
+openai_base_url: "http://localhost:4000"
 
 # Hermes Agent runtime.
 hermes_home: "~/.hermes"                  # where profiles/, .env, state.db live
@@ -53,9 +56,9 @@ server_host: "0.0.0.0"   # 0.0.0.0 so both localhost and the Tailscale URL reach
 server_port: 7777
 
 # Dispatch routing models (which aliases power the two-layer dispatcher).
-dispatch_router_model: "pipeline"   # fast model that picks the agent
-dispatch_enhancer_model: "analyze"  # capable model that expands your prompt
+dispatch_router_model: "structured"   # fast structured model that picks the agent
+dispatch_enhancer_model: "reasoning"  # capable model that expands your prompt
 
 # Tailscale (OPTIONAL, for phone access). Just your device's tailnet name;
 # `tailscale serve` provides the clean URL. Leave blank if not using mobile.
-tailscale_hostname: ""   # e.g. "mac-mini" → reachable at mac-mini.<tailnet>.ts.net
+tailscale_hostname: ""   # e.g. "mac-mini" reachable at mac-mini.<tailnet>.ts.net

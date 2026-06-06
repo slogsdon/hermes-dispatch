@@ -6,7 +6,7 @@ GTM pair, `gtm-planner` decides the strategy, this writes the copy.
 
 | | |
 |---|---|
-| **Alias** | `write` → `gpt-oss:20b` (13.8 GB) |
+| **Alias** | `writing` |
 | **Tools** | none |
 | **Turns** | 1 |
 | **Output** | 5 asset sections (or a custom set) |
@@ -15,7 +15,7 @@ GTM pair, `gtm-planner` decides the strategy, this writes the copy.
 
 ```bash
 # Chain from the planner:
-cat brief.md | ./../gtm-planner/run.sh | ./run.sh
+cat brief.md |./../gtm-planner/run.sh |./run.sh
 
 # Direct, with a custom asset list:
 ./run.sh "Plan: <paste>. Just give me the announcement + 3 subject lines."
@@ -23,9 +23,9 @@ cat brief.md | ./../gtm-planner/run.sh | ./run.sh
 
 ## Why this alias
 
-`write` (gpt-oss:20b) is the long-form copy slot, enough capacity for coherent,
+`writing` is the long-form copy slot, enough capacity for coherent,
 on-message assets. `--ignore-rules` keeps the voice set by the prompt (honest, technical,
-no hype), not by Shane's vault persona. `[TK: …]` markers flag any fact the plan didn't
+no hype), not by a vault persona. `[TK: …]` markers flag any fact the plan didn't
 supply, grep for `TK` before shipping.
 
 ## Pairs with

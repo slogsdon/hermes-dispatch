@@ -2,7 +2,7 @@
 """Hermes Dispatch, a two-layer mobile chat over the Hermes agent roster.
 
 Layer 1 (dispatcher): a persistent chat. Each user message goes to a capable
-"dispatcher" model (the `analyze` alias) which BOTH (a) rewrites the request into
+"dispatcher" model (the `reasoning` alias) which BOTH (a) rewrites the request into
 a detailed, agent-tuned prompt and (b) routes it to the best agent, returning
 JSON {agent, expanded_prompt, reasoning}.
 
@@ -52,9 +52,9 @@ ENV_FILE = HERMES_HOME / ".env"
 DISPATCH_HOME = Path(os.environ.get("HERMES_DISPATCH_HOME", str(Path.home() / ".hermes-dispatch")))
 HISTORY_FILE = DISPATCH_HOME / "history.json"
 LITELLM_BASE = os.environ.get("LITELLM_BASE", "http://localhost:4000/v1")
-DISPATCHER_MODEL = os.environ.get("HERMES_DISPATCHER_MODEL", "analyze")
+DISPATCHER_MODEL = os.environ.get("HERMES_DISPATCHER_MODEL", "reasoning")
 # Two-tier dispatch: a fast model routes/classifies, a capable model expands the prompt.
-ROUTER_MODEL = os.environ.get("HERMES_ROUTER_MODEL", "pipeline")
+ROUTER_MODEL = os.environ.get("HERMES_ROUTER_MODEL", "structured")
 ENHANCER_MODEL = os.environ.get("HERMES_ENHANCER_MODEL", DISPATCHER_MODEL)
 HISTORY_CONTEXT_TURNS = 20
 
@@ -73,7 +73,7 @@ VAULT = Path(_VAULT_ENV).expanduser() if _VAULT_ENV else None
 OBSIDIAN_BIN = os.environ.get("OBSIDIAN_BIN") or shutil.which("obsidian") or "obsidian"
 PINNED_CONTEXT_MAX = 4000   # chars of pinned artifact shown to the dispatcher
 # Titling a note is trivial, use a fast model, not the slow r1 dispatcher.
-TITLE_MODEL = os.environ.get("HERMES_TITLE_MODEL", "pipeline")
+TITLE_MODEL = os.environ.get("HERMES_TITLE_MODEL", "structured")
 
 HERE = Path(__file__).resolve().parent
 INDEX = HERE / "index.html"

@@ -1,8 +1,6 @@
-# proposal-writer, scope brief → structured client proposal
-# Model: write → gpt-oss:20b (13.8 GB), long-form writing slot. A proposal is polished
-# multi-section prose where tone and specificity matter; the 20B writer has the capacity for
-# coherent, on-message copy without drifting into boilerplate.
-alias: write
+# proposal-writer, scope brief → structured client proposal.
+# Alias: writing, writing role, long-form prose.
+alias: writing
 provider: litellm
 max_turns: 1
 toolsets: ""
@@ -11,5 +9,5 @@ ignore_user_config: false
 quiet: true
 parse_last_line: false
 strip_think: false
-strip_reasoning: true    # gpt-oss (write) prepends a "┌─ Reasoning" block to stdout, strip it
+strip_reasoning: true    # reasoning-channel models prepend a "┌─ Reasoning" block to stdout; strip it (safe no-op otherwise)
 answer_anchor: "## Executive Summary"   # first heading of the proposal; cut anything before it

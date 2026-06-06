@@ -7,7 +7,7 @@ extraction.
 
 | | |
 |---|---|
-| **Alias** | `analyze` → `deepseek-r1:14b` |
+| **Alias** | `reasoning` |
 | **Tools** | none |
 | **Turns** | 1 (one-shot) |
 | **Output** | `## Cash Digest` / `## Top Expenses` / `## Verdict` |
@@ -15,8 +15,8 @@ extraction.
 ## Usage
 
 ```bash
-cat transactions.csv | ./run.sh
-pbpaste | ./run.sh
+cat transactions.csv |./run.sh
+pbpaste |./run.sh
 
 ./run.sh "Stripe payout +4200; AWS -380; Figma -45; Contractor -1500; Rent -2200; Ads -300"
 ```
@@ -38,22 +38,22 @@ Watch, net-negative week; outflows edged past a single lumpy payout.
 
 ## Why this alias
 
-`analyze` (deepseek-r1:14b) is the only roster model billed for "reasoning/debugging," and
+`reasoning` is the only roster model billed for "reasoning/debugging," and
 this is the rare ops task that earns it: summing signed amounts, bucketing and ranking
-expense categories, and forming a health call are reasoning over numbers, a `pipeline`
-(no-thinking) model would extract fields fine but is the wrong tool for judgment. `analyze`
-runs cleanly under this project's home (all toolsets disabled, so deepseek-r1's
+expense categories, and forming a health call are reasoning over numbers, a `structured`
+(no-thinking) model would extract fields fine but is the wrong tool for judgment. `reasoning`
+runs cleanly under this project's home (all toolsets disabled, so's
 tool-rejecting template never sees a tools array; `show_reasoning: false` suppresses the
 rendered chain-of-thought). `strip_think` + `strip_reasoning` are inert belt-and-braces.
 
 ## Scope & tuning
 
-- Keep inputs under deepseek-r1's real context (~40K tokens), a week of transactions is
-  well within that. For a month, pre-aggregate or chunk by week.
+- Keep inputs under's real context (~40K tokens), a week of transactions is
+ well within that. For a month, pre-aggregate or chunk by week.
 - The categories and the `Healthy/Watch/Tight` verdict scale live in `prompt.md`. Adjust to
-  match your chart of accounts.
-- Want it faster and don't need the reasoning? `alias: write` (gpt-oss:20b) or `quality`
-  also handle the prose, but you lose the careful arithmetic deepseek does best.
+ match your chart of accounts.
+- Want it faster and don't need the reasoning? `alias: writing` or `max`
+ also handle the prose, but you lose the careful arithmetic does best.
 
 ## In the Hermes desktop app
 
@@ -63,9 +63,9 @@ auto-discovers every agent dir (any folder with `agent.yaml` + `prompt.md`), so 
 after adding or editing an agent:
 
 ```bash
-bin/gen-profiles.sh                 # materialize one profile per agent into ~/.hermes/profiles/
-hermes profile list                 # confirm `cashflow-summarizer` appears with model `analyze`
-hermes desktop                      # → pick `cashflow-summarizer` as a chat persona (or: hermes dashboard)
+bin/gen-profiles.sh # materialize one profile per agent into ~/.hermes/profiles/
+hermes profile list # confirm `cashflow-summarizer` appears with model `reasoning`
+hermes desktop # → pick `cashflow-summarizer` as a chat persona (or: hermes dashboard)
 ```
 
 The zero-build web UI (`python3 webui/serve.py`) also lists this agent automatically. See

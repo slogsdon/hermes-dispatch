@@ -1,10 +1,6 @@
-# pr-reviewer, diff review against a fixed rubric
-# Model: quality → qwen3.6:35b-mlx (21.9 GB). Escalated from `review` (granite4.1:8b):
-# in testing granite INVERTED a security finding (endorsed a timing-unsafe comparison) and
-# wrongly APPROVED. Code review, especially security, needs the strongest local reasoner.
-# qwen3.6 routes thinking to a separate channel, so the project config's show_reasoning:false
-# yields clean output; strip_reasoning + answer_anchor are a belt-and-braces fallback.
-alias: quality
+# pr-reviewer, diff review against a fixed rubric.
+# Alias: max, max tier, best quality for high-consequence work.
+alias: max
 provider: litellm
 max_turns: 1            # judge once over the pasted diff; no tools, no loop
 toolsets: ""            # diff is piped/pasted in, no file access needed

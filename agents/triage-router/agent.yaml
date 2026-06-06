@@ -1,9 +1,6 @@
-# triage-router, classify/route an item to a fixed enum, emit minified JSON
-# Model: pipeline → lfm2:24b (14.4 GB), "fast structured tasks, NO thinking".
-# Chosen over `classify` (lfm2.5-thinking:1.2b) on purpose: the brief's live test showed
-# the thinking model streams chain-of-thought before the JSON and mis-picks fields.
-# pipeline emits clean structured output. parse_last_line is on as a belt-and-braces guard.
-alias: pipeline
+# triage-router, classify/route an item to a fixed enum, emit minified JSON.
+# Alias: structured, structured role, fast and reliable structured output.
+alias: structured
 provider: litellm
 max_turns: 1
 toolsets: ""

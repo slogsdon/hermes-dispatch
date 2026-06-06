@@ -6,7 +6,7 @@ investment, and terms. The mid-pipeline closer, runs after discovery has surface
 
 | | |
 |---|---|
-| **Alias** | `write` → `gpt-oss:20b` (13.8 GB) |
+| **Alias** | `writing` |
 | **Tools** | none |
 | **Turns** | 1 |
 | **Output** | 6 fixed Markdown sections |
@@ -14,7 +14,7 @@ investment, and terms. The mid-pipeline closer, runs after discovery has surface
 ## Usage
 
 ```bash
-cat scope-brief.md | ./run.sh
+cat scope-brief.md |./run.sh
 
 ./run.sh "Problem: client's API docs drive support tickets. Deliverables: docs audit + \
 quickstart + 3 samples. Timeline: 6 weeks. Budget: ~\$18k."
@@ -23,8 +23,8 @@ quickstart + 3 samples. Timeline: 6 weeks. Budget: ~\$18k."
 ## Why this alias
 
 A proposal is polished, multi-section prose where tone and specificity carry the sale, so it
-runs on `write` (gpt-oss:20b), the long-form copy slot. `--ignore-rules` keeps the voice set
-by the prompt (confident, specific, no boilerplate), not Shane's vault persona. `[TK: …]`
+runs on `writing`, the long-form copy slot. `--ignore-rules` keeps the voice set
+by the prompt (confident, specific, no boilerplate), not a vault persona. `[TK: …]`
 markers flag any fact the brief didn't supply, grep for `TK` before sending.
 
 ## Desktop / web UI
@@ -34,9 +34,9 @@ Hermes **desktop** app (or `hermes dashboard` web UI), register it as a profile 
 desktop discovers profiles, not this repo's shell wrappers (see [ARCHITECTURE.md](../ARCHITECTURE.md#2-exposing-agents-in-the-hermes-desktop-app)):
 
 ```bash
-bin/gen-profiles.sh proposal-writer   # materialize the profile (model + persona pinned)
-hermes profile list                   # → proposal-writer appears with model=write
-hermes desktop                        # pick it as a chat persona
+bin/gen-profiles.sh proposal-writer # materialize the profile (model + persona pinned)
+hermes profile list # → proposal-writer appears with model=write
+hermes desktop # pick it as a chat persona
 ```
 
 ## Pairs with

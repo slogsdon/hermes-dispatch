@@ -1,12 +1,6 @@
-# cashflow-summarizer, reason over a transaction list, emit a weekly cash digest
-# Model: analyze → deepseek-r1:14b, "reasoning/debugging". This is the one roster task
-# that genuinely wants a reasoner: it has to sum signed amounts, bucket expenses, rank the
-# top categories, and form a health verdict, arithmetic + judgment over numbers, not field
-# extraction. `pipeline` (no thinking) would be faster but is the wrong tool for reasoning.
-# analyze is usable here because the project home disables all toolsets (deepseek-r1's
-# Ollama template hard-rejects tool defs); with show_reasoning:false the rendered Reasoning
-# block is suppressed. strip_reasoning + strip_think + answer_anchor are belt-and-braces.
-alias: analyze
+# cashflow-summarizer, reason over a transaction list, emit a weekly cash digest.
+# Alias: reasoning, reasoning role, chain-of-thought.
+alias: reasoning
 provider: litellm
 max_turns: 1
 toolsets: ""            # transactions are piped/pasted in, no file access needed
@@ -14,6 +8,6 @@ ignore_rules: true
 ignore_user_config: false
 quiet: true
 parse_last_line: false
-strip_think: true         # deepseek-r1 can emit inline <think>…</think>; cut it
+strip_think: true         # some reasoning models emit inline <think> tags; handled per config
 strip_reasoning: true     # fallback; config already suppresses the reasoning block
 answer_anchor: "## Cash Digest"   # first heading of the digest; cut anything before it

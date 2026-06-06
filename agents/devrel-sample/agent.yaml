@@ -1,5 +1,5 @@
-# devrel-sample, developer-advocacy code sample generator
-# Model: code → qwen2.5-coder:14b (9.0 GB), strongest local coder, fits easily.
+# devrel-sample, developer-advocacy code sample generator.
+# Alias: code, code role.
 alias: code
 provider: litellm
 max_turns: 1            # one-shot generation; no tool loop
@@ -7,4 +7,4 @@ toolsets: ""            # no tools, generate from the spec you paste in
 ignore_rules: true      # strip SOUL/AGENTS/memory/skill injection (anti-bleed)
 ignore_user_config: false
 quiet: true
-parse_last_line: false  # qwen2.5-coder is non-reasoning; emits clean output
+parse_last_line: false  # the code model is non-reasoning; emits clean output

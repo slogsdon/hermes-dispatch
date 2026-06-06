@@ -1,11 +1,6 @@
-# inbox-triage, classify a batch of emails to a fixed enum, emit minified JSON
-# Model: pipeline → lfm2:24b (14.4 GB), "fast structured tasks, NO thinking". A batch of
-# subject/snippet lines mapped to a fixed enum (+ a one-line draft for the urgent ones) is
-# exactly the structured-output sweet spot: one pass, fixed schema, no reasoning. Chosen
-# over `classify` (lfm2.5-thinking:1.2b) for the same reason triage-router/invoice-tracker
-# were, the thinking model streams CoT before the JSON and mis-picks fields; pipeline emits
-# clean output. parse_last_line keeps only the final line (the JSON array) as a guard.
-alias: pipeline
+# inbox-triage, classify a batch of emails to a fixed enum, emit minified JSON.
+# Alias: structured, structured role, fast and reliable structured output.
+alias: structured
 provider: litellm
 max_turns: 1
 toolsets: ""            # emails are pasted/piped in, no fetching

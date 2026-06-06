@@ -2,12 +2,12 @@
 
 A senior product designer that gives **design direction** (from a brief) or **critique**
 (of a text-described design, DESIGN.md, tokens, component markup/CSS, layout spec). Opinion
-backed by principle, ruthless on hierarchy and accessibility. Pairs with Shane's `design-*`
+backed by principle, ruthless on hierarchy and accessibility. Pairs with a `design-*`
 skills, which produce exactly the text artifacts this reviews.
 
 | | |
 |---|---|
-| **Alias** | `quality` → `qwen3.6:35b-mlx` (21.9 GB) |
+| **Alias** | `max` |
 | **Tools** | none |
 | **Turns** | 1 |
 | **Output** | `## Read` / Hierarchy / Typography / Color / Components / Findings / Next Moves |
@@ -16,8 +16,8 @@ skills, which produce exactly the text artifacts this reviews.
 
 ```bash
 # Critique an existing design spec:
-cat design/acme/DESIGN.md | ./run.sh
-cat design/acme/tokens.css | ./run.sh
+cat design/acme/DESIGN.md |./run.sh
+cat design/acme/tokens.css |./run.sh
 
 # Get direction from a brief:
 ./run.sh "Brief: landing page for hermes-agents, backend-dev audience, dark theme, \
@@ -33,13 +33,12 @@ in `agent.yaml`, bump `max_turns`) and pass an image, at the cost of the minimal
 
 ## Why this alias
 
-Design taste is the one judgment task that earns `quality` (qwen3.6:35b-mlx), best local
+Design taste is the one judgment task that earns `max`, best local
 holistic judgment, long context for whole-spec review, and its thinking is routed to a
-separate channel so the visible critique stays clean (no `strip_think` needed). Fits *alone*
-on 32 GB; don't co-resident it with another large model.
+separate channel so the visible critique stays clean (no `strip_think` needed). It runs *alone*; don't co-resident it with another large model.
 
 ## Tuning
 
-- For a cheaper, gate-style design review, switch `alias: review` (granite4.1:8b).
+- For a cheaper, gate-style design review, switch `alias: balanced`.
 - WCAG AA contrast checks are inferred from stated colors only, verify rendered contrast
-  with a real checker before shipping.
+ with a real checker before shipping.

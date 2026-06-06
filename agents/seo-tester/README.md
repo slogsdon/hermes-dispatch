@@ -6,17 +6,17 @@ drop it in a content CI gate or batch it over a site.
 
 | | |
 |---|---|
-| **Model** | `pipeline` → `lfm2:24b` (subjective checks only) + deterministic code |
+| **Model** | `structured` |
 | **Tools** | none |
 | **Output** | `{"checks":[…],"summary":{…}}` minified JSON |
 
 ## Usage
 
 ```bash
-cat page.md | ./run.sh | jq .
+cat page.md |./run.sh | jq.
 
 # Gate in a script: fail the build if verdict != pass
-v=$(cat page.md | ./run.sh | jq -r '.summary.verdict')
+v=$(cat page.md |./run.sh | jq -r '.summary.verdict')
 [[ "$v" == "pass" ]] || { echo "SEO gate failed"; exit 1; }
 ```
 
@@ -30,12 +30,12 @@ Earlier this agent was pure-LLM and **fabricated char counts** (it scored a 218-
 split:
 
 - **Objective checks, deterministic, in [`checks.py`](checks.py):** `title_length`,
-  `meta_length`, `single_h1`, `keyword_in_title`, `keyword_in_h1`, `keyword_early`,
-  `has_subheadings`, `internal_link`. The model never counts.
+ `meta_length`, `single_h1`, `keyword_in_title`, `keyword_in_h1`, `keyword_early`,
+ `has_subheadings`, `internal_link`. The model never counts.
 - **Subjective checks, the model judges only these two:** `answerable_intro`,
-  `no_keyword_stuffing` (via [`prompt.md`](prompt.md), returning a tiny JSON).
+ `no_keyword_stuffing` (via [`prompt.md`](prompt.md), returning a tiny JSON).
 - **Merge + summary, deterministic:** [`run.sh`](run.sh) merges both and recomputes the
-  `summary` counts in code, so the tally always reconciles with the checks array.
+ `summary` counts in code, so the tally always reconciles with the checks array.
 
 Keyword matching is forgiving: exact phrase → `pass`, ≥60% of keyword tokens present →
 `warn` (close variant), otherwise `fail`. `internal_link` passes only on a real Markdown
@@ -45,4 +45,4 @@ link or URL (link-*intent* text like "see our guide" is a `warn`).
 
 - Edit the thresholds/checks in `checks.py`; edit the two subjective checks in `prompt.md`.
 - `HERMES_DRY_RUN` doesn't apply here (this agent runs a code+model pipeline, not a single
-  `hermes` call).
+ `hermes` call).

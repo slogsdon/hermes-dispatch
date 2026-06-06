@@ -1,38 +1,36 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Model preset: cloud APIs via LiteLLM (zero local setup)
 #
-# Map every alias to a hosted model. No Ollama, no GPU, no model downloads. But
-# it COSTS MONEY per token and your prompts leave your machine. Good for trying
-# the project, running on a laptop, or when local quality isn't enough.
+# Every alias mapped to a hosted model. No Ollama, no GPU, no downloads. But it
+# costs money per token and your prompts leave your machine. Good for trying the
+# project, running on a laptop, or when local quality isn't enough.
 #
-# LiteLLM speaks to every provider with a uniform `provider/model` string and
-# reads each provider's key from the environment. Set whichever you use:
+# LiteLLM speaks to every provider with a uniform `provider/model` string and reads
+# each provider's key from the environment. Set whichever you use:
 #   export OPENAI_API_KEY=sk-...
 #   export ANTHROPIC_API_KEY=sk-ant-...
 #   export GROQ_API_KEY=gsk_...
 #
-# Mix and match freely. Use cheap models for the high-volume aliases (classify,
-# pipeline), frontier models only for `quality`.
-#
 # Paste this `models:` block into config.yaml.
 # ─────────────────────────────────────────────────────────────────────────────
 models:
-  # alias      provider/model               role / cost posture
-  classify: "openai/gpt-4o-mini"           # cheap, fast triage/routing
-  chat:     "openai/gpt-4o-mini"           # cheap conversational
-  review:   "anthropic/claude-3-5-haiku-latest"  # fast review/gate
-  code:     "anthropic/claude-3-5-sonnet-latest" # strong code generation
-  analyze:  "openai/o4-mini"               # reasoning model for analysis
-  pipeline: "groq/llama-3.3-70b-versatile" # fast + cheap structured output
-  write:    "openai/gpt-4o"                # long-form prose
-  quality:  "anthropic/claude-3-5-sonnet-latest" # best quality on the hard steps
+  # tiers (required)
+  fast:     "openai/gpt-4o-mini"                 # cheap, quick triage/routing/chat
+  balanced: "openai/gpt-4o-mini"                 # mid default (bump to gpt-4o for more)
+  max:      "anthropic/claude-3-5-sonnet-latest" # best quality on the hard steps
+
+  # task roles (optional; "" inherits the [tier])
+  structured: "groq/llama-3.3-70b-versatile"     # [fast]     fast + cheap structured output
+  code:       "anthropic/claude-3-5-sonnet-latest" # [balanced] strong code generation
+  writing:    "openai/gpt-4o"                     # [balanced] long-form prose
+  reasoning:  "openai/o4-mini"                    # [max]      reasoning model for analysis
 
 # Notes
 # -----
-# - Cost control: `classify` and `pipeline` run on nearly every request, so keep them
-#   on the cheapest capable models. Reserve frontier models for `quality`/`code`.
+# - Cost control: `fast` and `structured` run on nearly every request, so keep them
+#   on the cheapest capable models. Reserve frontier models for `max`/`code`.
 # - The 64K-context-floor override in hermes-home/config.yaml is harmless for cloud
 #   models (their real context is far larger); it only ever raises a declared number.
-# - Groq is optional but the fastest cheap option for the high-volume `pipeline`
-#   slot. Drop it for `openai/gpt-4o-mini` if you'd rather use one provider.
+# - Groq is optional but the fastest cheap option for `structured`. Swap it for
+#   `openai/gpt-4o-mini` to stay on one provider.
 # - Update model names as providers ship new versions. These are point-in-time tags.

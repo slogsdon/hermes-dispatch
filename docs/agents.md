@@ -1,6 +1,6 @@
 # Agent roster
 
-28 narrow agents. Each is a pure `stdin → stdout` shell wrapper: a system prompt (`SOUL.md`), a declarative spec (`agent.yaml`), and a thin `run.sh`. None names a model. Each names an alias (the recommended tier below). Remap aliases in `config.yaml` to change what backs them. See [model-configuration.md](model-configuration.md).
+28 narrow agents. Each is a pure `stdin → stdout` shell wrapper: a system prompt (`SOUL.md`), a declarative spec (`agent.yaml`), and a thin `run.sh`. None names a model. Each names an alias, one of three tiers (`fast`, `balanced`, `max`) or four task roles (`structured`, `code`, `writing`, `reasoning`). Remap aliases in `config.yaml` to change what backs them. See [model-configuration.md](model-configuration.md).
 
 ```bash
 ./agents/<name>/run.sh "input"        # inline
@@ -12,74 +12,74 @@ HERMES_DRY_RUN=1 ./agents/<name>/run.sh "x"   # show composed command, don't run
 
 | Agent | Purpose | Alias |
 |-------|---------|-------|
-| `blog-drafter` | First-draft long-form blog prose from an outline or notes | `write` |
-| `social-media-marketer` | Topic, link, or draft to LinkedIn, X, and thread posts | `chat` |
-| `status-update-writer` | done/blocked/next bullets to a polished client status update | `write` |
+| `blog-drafter` | First-draft long-form blog prose from an outline or notes | `writing` |
+| `social-media-marketer` | Topic, link, or draft to LinkedIn, X, and thread posts | `fast` |
+| `status-update-writer` | done/blocked/next bullets to a polished client status update | `writing` |
 
 ## Code and review
 
 | Agent | Purpose | Alias |
 |-------|---------|-------|
 | `devrel-sample` | API plus capability description to a developer code sample plus notes | `code` |
-| `pr-reviewer` | Unified diff to a five-axis review (correctness, readability, and more) | `quality` |
+| `pr-reviewer` | Unified diff to a five-axis review (correctness, readability, and more) | `max` |
 
 ## SEO and AEO
 
 | Agent | Purpose | Alias |
 |-------|---------|-------|
-| `seo-reviewer` | Page or draft to a qualitative on-page SEO and AEO audit | `quality` |
-| `seo-tester` | Page to machine-readable per-check pass/fail JSON | `pipeline` |
+| `seo-reviewer` | Page or draft to a qualitative on-page SEO and AEO audit | `max` |
+| `seo-tester` | Page to machine-readable per-check pass/fail JSON | `structured` |
 
 ## Go-to-market and design
 
 | Agent | Purpose | Alias |
 |-------|---------|-------|
-| `gtm-planner` | Product or feature brief to a decision-ready GTM plan | `quality` |
-| `gtm-executor` | GTM plan to paste-ready launch assets (announcement, email, CTA) | `write` |
-| `lead-designer` | Brief to design direction, or artifact to design critique | `quality` |
+| `gtm-planner` | Product or feature brief to a decision-ready GTM plan | `max` |
+| `gtm-executor` | GTM plan to paste-ready launch assets (announcement, email, CTA) | `writing` |
+| `lead-designer` | Brief to design direction, or artifact to design critique | `max` |
 
 ## Sales pipeline
 
 | Agent | Purpose | Alias |
 |-------|---------|-------|
-| `prospect-researcher` | Company or contact to a sales-call research brief | `quality` |
-| `discovery-prep` | Prospect plus goal to a pre-call discovery plan | `quality` |
-| `proposal-writer` | Scope brief to a structured client proposal | `write` |
-| `followup-drafter` | Last interaction to a concise follow-up email | `write` |
-| `scope-creep-detector` | Agreed scope plus new request to an in/out call plus rationale | `analyze` |
+| `prospect-researcher` | Company or contact to a sales-call research brief | `max` |
+| `discovery-prep` | Prospect plus goal to a pre-call discovery plan | `max` |
+| `proposal-writer` | Scope brief to a structured client proposal | `writing` |
+| `followup-drafter` | Last interaction to a concise follow-up email | `writing` |
+| `scope-creep-detector` | Agreed scope plus new request to an in/out call plus rationale | `reasoning` |
 
 ## Legal and compliance
 
 | Agent | Purpose | Alias |
 |-------|---------|-------|
-| `contract-reviewer` | Contract or vendor agreement to a severity-ranked risk pass | `quality` |
-| `tos-reviewer` | Terms of service to a risk pass before you agree | `quality` |
-| `privacy-checker` | Privacy policy or DPA to a data map plus gaps | `quality` |
+| `contract-reviewer` | Contract or vendor agreement to a severity-ranked risk pass | `max` |
+| `tos-reviewer` | Terms of service to a risk pass before you agree | `max` |
+| `privacy-checker` | Privacy policy or DPA to a data map plus gaps | `max` |
 
 ## Finance
 
 | Agent | Purpose | Alias |
 |-------|---------|-------|
-| `cashflow-summarizer` | Transactions (paste or CSV) to a weekly cashflow summary | `analyze` |
-| `invoice-tracker` | Invoice email to vendor, amount, currency, due date, and status | `pipeline` |
-| `expense-classifier` | Transaction descriptions to tax-relevant categories | `pipeline` |
+| `cashflow-summarizer` | Transactions (paste or CSV) to a weekly cashflow summary | `reasoning` |
+| `invoice-tracker` | Invoice email to vendor, amount, currency, due date, and status | `structured` |
+| `expense-classifier` | Transaction descriptions to tax-relevant categories | `structured` |
 
 ## Automation and triage
 
 | Agent | Purpose | Alias |
 |-------|---------|-------|
-| `triage-router` | One item to a routing decision (single-line minified JSON) | `pipeline` |
-| `inbox-triage` | Batch of emails to a classified enum plus urgency | `pipeline` |
+| `triage-router` | One item to a routing decision (single-line minified JSON) | `structured` |
+| `inbox-triage` | Batch of emails to a classified enum plus urgency | `structured` |
 
 ## Knowledge work
 
 | Agent | Purpose | Alias |
 |-------|---------|-------|
-| `vault-distiller` | Long note to atomic concepts, `[[wikilinks]]`, and tags | `quality` |
-| `decision-journal` | A decision to a durable note written for future-you | `analyze` |
-| `meeting-to-actions` | Notes or transcript to decisions plus action items | `analyze` |
-| `retro-generator` | Project notes to a structured retrospective | `analyze` |
-| `weekly-review-synthesis` | A week of notes to a candid weekly review | `quality` |
+| `vault-distiller` | Long note to atomic concepts, `[[wikilinks]]`, and tags | `max` |
+| `decision-journal` | A decision to a durable note written for future-you | `reasoning` |
+| `meeting-to-actions` | Notes or transcript to decisions plus action items | `reasoning` |
+| `retro-generator` | Project notes to a structured retrospective | `reasoning` |
+| `weekly-review-synthesis` | A week of notes to a candid weekly review | `max` |
 
 ## agent.yaml keys
 

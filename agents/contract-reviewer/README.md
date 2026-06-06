@@ -7,7 +7,7 @@ sign it yourself. Risk flags, not legal advice.
 
 | | |
 |---|---|
-| **Alias** | `quality` → `qwen3.6:35b-mlx` (21.9 GB) |
+| **Alias** | `max` |
 | **Tools** | none |
 | **Turns** | 1 (one-shot judge) |
 | **Output** | `## Verdict` / `## Findings` (`[BLOCKER\|WARN\|NOTE]`) |
@@ -23,8 +23,8 @@ sign it yourself. Risk flags, not legal advice.
 ## Usage
 
 ```bash
-cat agreement.txt | ./run.sh
-pdftotext msa.pdf - | ./run.sh      # convert a PDF to text first
+cat agreement.txt |./run.sh
+pdftotext msa.pdf - |./run.sh # convert a PDF to text first
 ./run.sh "$(pbpaste)"
 ```
 
@@ -34,29 +34,28 @@ SIGN WITH CHANGES, liability is capped but the auto-renewal notice window is a t
 
 ## Findings
 - [BLOCKER] IP assignment, "Client assigns all right, title and interest..." → assigns your
-  background IP, not just deliverables; narrow to work product created under this SOW.
+ background IP, not just deliverables; narrow to work product created under this SOW.
 - [WARN] Auto-renewal, "renews for successive 12-month terms unless cancelled 90 days prior"
-  → 90-day window is easy to miss; request 30 days and a renewal reminder clause.
+ → 90-day window is easy to miss; request 30 days and a renewal reminder clause.
 - [NOTE] Governing law, "governed by the laws of Delaware" → standard; no action needed.
 ```
 
 ## Why this alias
 
-Uses `quality` (qwen3.6:35b-mlx) for the same reason as `pr-reviewer` and `seo-reviewer`:
-the smaller `review` model (granite4.1:8b) was caught inverting findings and miscalibrating
+Uses `max` for the same reason as `pr-reviewer` and `seo-reviewer`:
+the smaller `balanced` model was caught inverting findings and miscalibrating
 severity, and contract risk is high-consequence, missing an uncapped-liability or
-auto-renewal trap costs real money. This is one of the agents that earns the 22 GB model.
-qwen3.6 routes its thinking to a separate channel, so output stays clean under the project
+auto-renewal trap costs real money. This is one of the agents that earns the `max` tier. When the backing model routes its thinking to a separate channel, output stays clean under the project
 home's `show_reasoning: false` (`strip_reasoning`/`answer_anchor` are an inert fallback).
 The trade-off is a slower cold load, worth it for a gate you actually trust.
 
 ## Scope & tuning
 
 - Reviews **only the text you paste**. For multi-document deals (MSA + order form +
-  exhibits), concatenate them first so cross-references resolve.
+ exhibits), concatenate them first so cross-references resolve.
 - The risk checklist and the `SIGN/SIGN WITH CHANGES/DO NOT SIGN` scale live in `prompt.md`.
 - This is a **risk flag, not legal advice**, use it to triage and to brief a lawyer, not to
-  replace one on anything that matters.
+ replace one on anything that matters.
 
 ## In the Hermes desktop app
 
@@ -66,9 +65,9 @@ auto-discovers every agent dir (any folder with `agent.yaml` + `prompt.md`), so 
 after adding or editing an agent:
 
 ```bash
-bin/gen-profiles.sh                 # materialize one profile per agent into ~/.hermes/profiles/
-hermes profile list                 # confirm `contract-reviewer` appears with model `quality`
-hermes desktop                      # → pick `contract-reviewer` as a chat persona (or: hermes dashboard)
+bin/gen-profiles.sh # materialize one profile per agent into ~/.hermes/profiles/
+hermes profile list # confirm `contract-reviewer` appears with model `max`
+hermes desktop # → pick `contract-reviewer` as a chat persona (or: hermes dashboard)
 ```
 
 The zero-build web UI (`python3 webui/serve.py`) also lists this agent automatically. See

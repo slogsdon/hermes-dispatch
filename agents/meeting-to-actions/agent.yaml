@@ -1,11 +1,6 @@
-# meeting-to-actions, extract decisions/actions/questions from raw meeting notes
-# Model: analyze → deepseek-r1:14b (9.0 GB), the reasoning slot. Separating what actually
-# matters (decisions, owned actions, real open questions) from transcript filler is a
-# judgment task, not a structured-extraction one, so it earns a reasoning model over
-# `pipeline`. deepseek-r1 is now usable in the harness: the project home disables all
-# toolsets, so zero tools are sent and its template no longer rejects the call (see the
-# top-level README tool-compatibility note). Output is multi-section Obsidian Markdown.
-alias: analyze
+# meeting-to-actions, extract decisions/actions/questions from raw meeting notes.
+# Alias: reasoning, reasoning role, chain-of-thought.
+alias: reasoning
 provider: litellm
 max_turns: 1
 toolsets: ""            # notes/transcript are pasted/piped in, no fetching
@@ -13,6 +8,6 @@ ignore_rules: true
 ignore_user_config: false
 quiet: true
 parse_last_line: false  # output is multi-section Markdown, not one line
-strip_think: false      # deepseek routes thinking to a channel, not inline <think> tags
+strip_think: false      # some reasoning models emit inline <think> tags; handled per config
 strip_reasoning: true   # fallback; config's show_reasoning:false already suppresses the block
 answer_anchor: "## Decisions"   # first heading of the note; cut anything before it

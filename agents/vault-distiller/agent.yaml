@@ -1,8 +1,6 @@
-# vault-distiller, distill a long note into atomic concepts + links
-# Model: quality → qwen3.6:35b-mlx (21.9 GB), best local quality, long context.
-# This is the ONE hard step that justifies the 22 GB model (see brief §3): real
-# synthesis over a long note, not a fixed-shape extraction.
-alias: quality
+# vault-distiller, distill a long note into atomic concepts + links.
+# Alias: max, max tier, best quality for high-consequence work.
+alias: max
 provider: litellm
 max_turns: 1
 toolsets: ""            # synthesis only, note content is pasted/piped in
@@ -10,5 +8,5 @@ ignore_rules: true      # do NOT inject the live vault/memory, keep the run dete
 ignore_user_config: false
 quiet: true
 parse_last_line: false  # full structured Markdown output, not a single line
-strip_reasoning: true    # qwen3.6 prepends a "┌─ Reasoning" block to stdout, strip it
+strip_reasoning: true    # reasoning-channel models prepend a "┌─ Reasoning" block to stdout; strip it (safe no-op otherwise)
 answer_anchor: "## Atomic Concepts"   # first heading; cut everything before it

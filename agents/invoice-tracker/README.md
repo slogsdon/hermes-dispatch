@@ -7,7 +7,7 @@ straight to `jq`.
 
 | | |
 |---|---|
-| **Alias** | `pipeline` → `lfm2:24b` (14.4 GB) |
+| **Alias** | `structured` |
 | **Tools** | none |
 | **Turns** | 1 (one-shot) |
 | **Output** | `{"vendor","amount","currency","due_date","status","notes"}` minified JSON |
@@ -15,20 +15,19 @@ straight to `jq`.
 ## Usage
 
 ```bash
-cat invoice.txt | ./run.sh | jq .
+cat invoice.txt |./run.sh | jq.
 # {"vendor":"Acme Cloud","amount":420,"currency":"USD","due_date":"2026-07-01","status":"unpaid","notes":"INV-2031, Net 30"}
 
 ./run.sh "$(pbpaste)"
 
 # Batch a folder of saved invoice emails into one NDJSON file:
-for f in ~/invoices/*.txt; do cat "$f" | ./run.sh; done > invoices.ndjson
+for f in ~/invoices/*.txt; do cat "$f" |./run.sh; done > invoices.ndjson
 ```
 
-## Why this alias (not `classify`)
+## Why this alias (not `fast`)
 
-This is field extraction against a fixed schema, exactly what `pipeline` (lfm2:24b),
-"fast structured tasks, *no thinking*", is for. The named-for-the-job `classify`
-(lfm2.5-thinking:1.2b) is a thinking model that streams chain-of-thought before the JSON
+This is field extraction against a fixed schema, exactly what `structured`,
+"fast structured tasks, *no thinking*", is for. The named-for-the-job `fast` is a thinking model that streams chain-of-thought before the JSON
 even with `-Q`, which corrupts the pipe and risks a mis-picked field, the same problem
 documented for `triage-router`. As belt-and-braces, `parse_last_line: true` keeps only the
 final non-empty stdout line, so a stray preamble can't break `jq`.
@@ -36,9 +35,9 @@ final non-empty stdout line, so a stray preamble can't break `jq`.
 ## Tuning
 
 - The schema and `status` enum live in `prompt.md`. Edit them there to fit your ledger;
-  keep the "ONLY one line of JSON" contract intact.
+ keep the "ONLY one line of JSON" contract intact.
 - The model extracts only what the invoice shows, empty/`0`/`"unknown"` over a guess.
-  For OCR'd PDFs, run the text through your OCR step first; this agent takes text in.
+ For OCR'd PDFs, run the text through your OCR step first; this agent takes text in.
 
 ## In the Hermes desktop app
 
@@ -48,9 +47,9 @@ auto-discovers every agent dir (any folder with `agent.yaml` + `prompt.md`), so 
 after adding or editing an agent:
 
 ```bash
-bin/gen-profiles.sh                 # materialize one profile per agent into ~/.hermes/profiles/
-hermes profile list                 # confirm `invoice-tracker` appears with model `pipeline`
-hermes desktop                      # → pick `invoice-tracker` as a chat persona (or: hermes dashboard)
+bin/gen-profiles.sh # materialize one profile per agent into ~/.hermes/profiles/
+hermes profile list # confirm `invoice-tracker` appears with model `structured`
+hermes desktop # → pick `invoice-tracker` as a chat persona (or: hermes dashboard)
 ```
 
 The zero-build web UI (`python3 webui/serve.py`) also lists this agent automatically. See

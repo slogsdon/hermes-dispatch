@@ -6,7 +6,7 @@ returns structurally sound, technically accurate Markdown prose for a human + th
 
 | | |
 |---|---|
-| **Alias** | `pipeline` → `lfm2:24b` (14.4 GB) |
+| **Alias** | `writing` |
 | **Tools** | none |
 | **Turns** | 1 (one-shot) |
 | **Output** | Markdown prose, no preamble |
@@ -19,26 +19,24 @@ returns structurally sound, technically accurate Markdown prose for a human + th
 ~250 words. Hook on 'you don't need a framework, you need five flags.'"
 
 # From an outline file:
-cat post-outline.md | ./run.sh > draft.md
+cat post-outline.md |./run.sh > draft.md
 ```
 
 ## Why this alias
 
-`pipeline` (lfm2:24b) is the fast, **no-thinking** structured slot. It replaced `write`
-(gpt-oss:20b) here because gpt-oss is a reasoning model that prepends a `┌─ Reasoning` block
-to stdout, and blog prose has no fixed heading to anchor a clean strip on, whereas
-`pipeline` emits clean output directly. Per Shane's LiteLLM benchmark, `pipeline` is ~6.8×
-faster than `write` with comparable quality. `--ignore-rules` is deliberately on so the
-draft is **not** colored by the vault persona/skill injection; voice is set in the prompt
-and refined downstream. (Want gpt-oss's reasoning-channel composition? Set `alias: write`, 
-output will carry a reasoning block that needs manual trimming.)
+Blog drafting is composition: tone, flow, paragraph structure. That is the `writing`
+role, not the fast `structured` role meant for JSON and extraction. Prefer a backing
+model with no separate reasoning channel, so the draft is clean prose with no
+`┌─ Reasoning` block to strip. `--ignore-rules` is deliberately on so the draft is
+**not** colored by any vault persona or skill injection; voice is set in the prompt and
+refined downstream.
 
 ## Pipeline fit
 
 This is the *draft* stage only. The intended flow:
 
 ```
-blog-drafter  →  humanize (Shane's voice)  →  ms-style-pass  →  publish-post
+blog-drafter → humanize (a voice) → ms-style-pass → publish-post
 ```
 
 The prompt intentionally avoids the AI-tell patterns (staccato fragments, colon-reveals,
@@ -48,4 +46,4 @@ em-dash lists) that the `humanize` skill exists to strip, less to undo later.
 
 - Always give a target length; the model otherwise over-writes.
 - `[TK: …]` markers flag missing facts, grep for `TK` before publishing.
-- For the genuinely hard, long-context synthesis pieces, try `alias: quality`.
+- For the genuinely hard, long-context synthesis pieces, try `alias: max`.

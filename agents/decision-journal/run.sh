@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# decision-journal, capture a decision + reasoning as an Obsidian note for future-Shane.
+# decision-journal, capture a decision + reasoning as an Obsidian note for future-you.
 #   ./run.sh "Today is $(date +%F). Decision: take the contract role or stay solo. \
 #   Options: ... Stakes: ..." > "Decisions/$(date +%F) contract-vs-solo.md"
 #   cat decision-brief.md | ./run.sh

@@ -6,7 +6,7 @@
 _config_version: 23
 
 model:
-  default: chat
+  default: balanced
   provider: litellm
 
 agent:
@@ -66,15 +66,16 @@ custom_providers:
   base_url: http://localhost:4000/v1
   key_env: LITELLM_MASTER_KEY
   api_mode: chat_completions
+  # One entry per canonical alias. context_length is what Hermes BUDGETS for the
+  # alias; it must be >= 64000 (Hermes' floor) even if the backing model's real
+  # num_ctx is smaller. Raise an entry if you map the alias to a longer-context model.
   models:
-    classify:      { context_length: 128000 }
-    chat:          { context_length: 131072 }
-    review:        { context_length: 65536 }
-    code:          { context_length: 65536 }
-    analyze:       { context_length: 64000 }   # Hermes 64K floor (real num_ctx 40960)
-    pipeline:      { context_length: 64000 }   # Hermes 64K floor (real num_ctx 32768)
-    write:         { context_length: 131072 }
-    quality:       { context_length: 131072 }
-    analyze-judge: { context_length: 64000 }
-    review-judge:  { context_length: 64000 }
-    quality-judge: { context_length: 64000 }
+    # tiers
+    fast:       { context_length: 131072 }
+    balanced:   { context_length: 65536 }
+    max:        { context_length: 131072 }
+    # task roles
+    structured: { context_length: 64000 }   # floor; raise if backed by a longer-ctx model
+    code:       { context_length: 65536 }
+    writing:    { context_length: 131072 }
+    reasoning:  { context_length: 64000 }   # floor; real num_ctx may be lower

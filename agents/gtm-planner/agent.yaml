@@ -1,12 +1,6 @@
-# gtm-planner, go-to-market strategy from a product/feature brief
-# Model: quality → qwen3.6:35b-mlx (21.9 GB), best local reasoning+judgment, and it
-# SUPPORTS tool-calling. GTM planning (segments, positioning, sequencing) is the kind of
-# hard reasoning step that earns the big model.
-# NOTE: analyze/deepseek-r1 was the natural "reasoning slot" pick but is INCOMPATIBLE with
-# Hermes, it rejects the non-empty tools array Hermes always sends even with `-t ""`
-# ("deepseek-r1 does not support tools"). See the README tool-compatibility note.
-# qwen3.6 routes thinking to a separate channel, so the visible plan is already clean.
-alias: quality
+# gtm-planner, go-to-market strategy from a product/feature brief.
+# Alias: max, max tier, best quality for high-consequence work.
+alias: max
 provider: litellm
 max_turns: 1
 toolsets: ""
@@ -14,6 +8,6 @@ ignore_rules: true
 ignore_user_config: false
 quiet: true
 parse_last_line: false  # the plan is multi-section Markdown, not one line
-strip_think: false       # no inline <think> tags from qwen3.6
-strip_reasoning: true    # qwen3.6 prepends a "┌─ Reasoning" block to stdout, strip it
+strip_think: false       # some reasoning models emit inline <think> tags; handled per config
+strip_reasoning: true    # reasoning-channel models prepend a "┌─ Reasoning" block to stdout; strip it (safe no-op otherwise)
 answer_anchor: "## Positioning"   # first heading of the plan; cut everything before it

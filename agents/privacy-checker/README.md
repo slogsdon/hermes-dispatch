@@ -11,7 +11,7 @@ your, or your clients', data.
 
 | | |
 |---|---|
-| **Alias** | `quality` → `qwen3.6:35b-mlx` (21.9 GB) |
+| **Alias** | `max` |
 | **Tools** | none |
 | **Turns** | 1 (one-shot judge) |
 | **Output** | `## Data Map` / `## Gaps` |
@@ -27,12 +27,12 @@ disclosures (GDPR legal basis / transfer mechanism / rights; CCPA notice / Do-No
 Pipe the policy straight in:
 
 ```bash
-pbpaste                            | ./run.sh
-cat privacy-policy.txt             | ./run.sh
-curl -s https://x.com/privacy.txt  | ./run.sh
+pbpaste |./run.sh
+cat privacy-policy.txt |./run.sh
+curl -s https://x.com/privacy.txt |./run.sh
 
 # Inline:
-./run.sh "Company: Acme. This is their DPA. Text: ..."
+./run.sh "Company: Acme. This is their DPA. Text:..."
 ```
 
 The **Data Map** summarizes the flows; **Gaps** is `[SEV] area, missing → expected`, with
@@ -41,9 +41,9 @@ not an assumption.
 
 ## Why this alias
 
-Uses `quality` (qwen3.6:35b-mlx), same escalation as `tos-reviewer` / `pr-reviewer`. Spotting
+Uses `max`, same escalation as `tos-reviewer` / `pr-reviewer`. Spotting
 a missing GDPR/CCPA disclosure or an undisclosed third-party data flow is reasoning over
-dense policy text where a small model's miss is a real compliance gap. qwen3.6 routes its
+dense policy text where a small model's miss is a real compliance gap. routes its
 thinking to a separate channel, so output stays clean under the project config's
 `show_reasoning: false`. GDPR/CCPA checks here are basics-level awareness, not a certified audit.
 
@@ -54,9 +54,9 @@ Hermes **desktop** app (or `hermes dashboard` web UI), register it as a profile 
 desktop discovers profiles, not this repo's shell wrappers (see [ARCHITECTURE.md](../ARCHITECTURE.md#2-exposing-agents-in-the-hermes-desktop-app)):
 
 ```bash
-bin/gen-profiles.sh privacy-checker   # materialize the profile (model + persona pinned)
-hermes profile list                   # → privacy-checker appears with model=quality
-hermes desktop                        # pick it as a chat persona
+bin/gen-profiles.sh privacy-checker # materialize the profile (model + persona pinned)
+hermes profile list # → privacy-checker appears with model=quality
+hermes desktop # pick it as a chat persona
 ```
 
 ## Pairs with

@@ -24,7 +24,7 @@ The dispatch server is then on `http://localhost:7777`, and reachable over Tails
 
 | Service | Role | Port |
 |---------|------|------|
-| `litellm` | the proxy gateway: serves the 8 aliases, routes to your backend | `4000` |
+| `litellm` | the proxy gateway: serves the 7 aliases, routes to your backend | `4000` |
 | `dispatch` | the mobile dispatch server plus UI (stdlib Python) | `7777` |
 
 `bootstrap.sh` runs on first start. It reads the env vars and generates the LiteLLM model map (alias to model), so you configure everything in one `.env` instead of hand-writing a LiteLLM config.
@@ -44,10 +44,11 @@ ANTHROPIC_API_KEY=sk-ant-...
 # (b) Local Ollama on the host:
 OLLAMA_BASE=http://host.docker.internal:11434
 
-# Per-alias model strings (defaults target cloud; override per alias)
-MODEL_CLASSIFY=openai/gpt-4o-mini
-MODEL_QUALITY=anthropic/claude-3-5-sonnet-latest
-# one per alias: classify, chat, review, code, analyze, pipeline, write, quality
+# Model tiers (required); roles inherit a tier unless set (defaults target cloud)
+MODEL_FAST=openai/gpt-4o-mini
+MODEL_BALANCED=openai/gpt-4o-mini
+MODEL_MAX=anthropic/claude-3-5-sonnet-latest
+# optional roles: MODEL_STRUCTURED, MODEL_CODE, MODEL_WRITING, MODEL_REASONING
 ```
 
 ## Notes and limits

@@ -1,11 +1,6 @@
-# discovery-prep, prospect + meeting goal → a pre-call discovery plan
-# Model: quality → qwen3.6:35b-mlx (21.9 GB), best local reasoning+judgment. Sequencing
-# discovery questions for conversational flow and framing call intent is a judgment step,
-# and the background must stay factual, so it earns the strong reasoner over the cheaper
-# models.
-# qwen3.6 routes thinking to a separate channel, so the visible plan is already clean;
-# strip_reasoning + answer_anchor are a belt-and-braces fallback.
-alias: quality
+# discovery-prep, prospect + meeting goal → a pre-call discovery plan.
+# Alias: max, max tier, best quality for high-consequence work.
+alias: max
 provider: litellm
 max_turns: 1
 toolsets: ""            # prospect + goal are pasted/piped in, no fetching
@@ -13,6 +8,6 @@ ignore_rules: true
 ignore_user_config: false
 quiet: true
 parse_last_line: false  # the plan is multi-section Markdown, not one line
-strip_think: false       # no inline <think> tags from qwen3.6
+strip_think: false       # some reasoning models emit inline <think> tags; handled per config
 strip_reasoning: true    # fallback; config already suppresses the reasoning block
 answer_anchor: "## Company Background"   # first heading of the plan; cut anything before it

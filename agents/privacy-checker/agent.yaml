@@ -1,10 +1,6 @@
-# privacy-checker, privacy policy / DPA review: data map + compliance gap list
-# Model: quality → qwen3.6:35b-mlx (21.9 GB). Same rationale as tos-reviewer/pr-reviewer:
-# spotting a missing GDPR/CCPA disclosure or an undisclosed third-party data flow is a
-# reasoning task over dense policy text where a small model's miss is a real compliance gap.
-# qwen3.6 routes thinking to a separate channel, so the project config's show_reasoning:false
-# yields clean output; strip_reasoning + answer_anchor are a belt-and-braces fallback.
-alias: quality
+# privacy-checker, privacy policy / DPA review: data map + compliance gap list.
+# Alias: max, max tier, best quality for high-consequence work.
+alias: max
 provider: litellm
 max_turns: 1            # judge once over the pasted policy; no tools, no loop
 toolsets: ""            # the policy / DPA text is pasted/piped in, no fetching

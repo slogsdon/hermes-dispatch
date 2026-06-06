@@ -1,6 +1,6 @@
-# seo-tester, run fixed SEO checks, emit machine-readable JSON (CI-style gate)
-# Model: pipeline → lfm2:24b (14.4 GB), fast structured tasks, NO thinking. Clean JSON.
-alias: pipeline
+# seo-tester, run fixed SEO checks, emit machine-readable JSON (CI-style gate).
+# Alias: structured, structured role, fast and reliable structured output.
+alias: structured
 provider: litellm
 max_turns: 1
 toolsets: ""

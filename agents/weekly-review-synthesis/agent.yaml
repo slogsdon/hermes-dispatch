@@ -1,10 +1,6 @@
-# weekly-review-synthesis, synthesize a week of daily notes into a weekly review
-# Model: quality → qwen3.6:35b-mlx (21.9 GB), best local reasoning+judgment. Distilling a
-# week of scattered notes into the 3 real wins, the 3 things that slipped, the energy
-# pattern underneath, and ONE honest focus for next week is a synthesis-and-judgment task, 
-# the kind that earns the big model. qwen3.6 routes thinking to a separate channel, so the
-# visible review is already clean. Output is Obsidian weekly-note Markdown.
-alias: quality
+# weekly-review-synthesis, synthesize a week of daily notes into a weekly review.
+# Alias: max, max tier, best quality for high-consequence work.
+alias: max
 provider: litellm
 max_turns: 1
 toolsets: ""            # the week's notes are pasted/piped in, no fetching
@@ -12,6 +8,6 @@ ignore_rules: true
 ignore_user_config: false
 quiet: true
 parse_last_line: false  # output is multi-section Markdown, not one line
-strip_think: false      # no inline <think> tags from qwen3.6
+strip_think: false      # some reasoning models emit inline <think> tags; handled per config
 strip_reasoning: true   # fallback; config's show_reasoning:false already suppresses the block
 answer_anchor: "## Top 3 Wins"   # first heading of the review; cut anything before it
