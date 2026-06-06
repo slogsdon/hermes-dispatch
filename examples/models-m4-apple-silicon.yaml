@@ -1,0 +1,36 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Model preset: Apple Silicon (M4 Mac Mini, 32 GB unified memory)
+#
+# This is the maintainer's actual working stack. Models are served by Ollama and
+# routed through LiteLLM (`ollama_chat/<tag>`). MLX builds (`-mlx`) are tuned for
+# Apple Silicon and noticeably faster than the GGUF equivalents on the same chip.
+#
+# THE 32 GB CEILING IS THE DESIGN CONSTRAINT. Unified memory is shared with the
+# OS and the rest of your apps, so keep the *resident* model ≤ ~20 GB. The roster
+# is built so the one big model (`quality`, 21.9 GB) runs ALONE, never co-resident
+# with another large model. Pipelines are sequential by construction: each agent's
+# model unloads before the next loads, so the chain respects the ceiling for free.
+#
+# Paste this `models:` block into config.yaml.
+# ─────────────────────────────────────────────────────────────────────────────
+models:
+  # alias      model                              size     role / why this model
+  classify: "ollama_chat/lfm2.5-thinking:1.2b"  #  1.0 GB  tiny thinking model for sub-second triage/routing
+  chat:     "ollama_chat/gemma4:e4b-mlx"        #  9.6 GB  fast conversational, no reasoning channel → clean output
+  review:   "ollama_chat/granite4.1:8b"         #  ~5 GB   review/gate slot; cheap pass for findings + verdicts
+  code:     "ollama_chat/qwen3-coder:30b"       # ~18 GB   strongest local coder for API samples / codegen
+  analyze:  "ollama_chat/deepseek-r1:14b"       #  9.0 GB  reasoning model for arithmetic, judgment over numbers
+  pipeline: "ollama_chat/lfm2:24b"              # 14.4 GB  fast structured output, NO thinking block; pipeline workhorse
+  write:    "ollama_chat/gemma4:26b-mlx"        # ~16 GB   long-form prose; no reasoning channel to strip
+  quality:  "ollama_chat/qwen3.6:35b-mlx"       # 21.9 GB  best quality: note synthesis, design/GTM strategy; RUNS ALONE
+
+# Notes
+# -----
+# - `analyze` (deepseek-r1) is the one model whose Ollama template hard-rejects
+#   tool definitions. The project's hermes-home/config.yaml disables ALL toolsets,
+#   so zero tools are sent and `analyze` runs cleanly. Don't re-enable toolsets.
+# - `analyze` (real num_ctx 40960) and `pipeline` (32768) sit below Hermes' 64K
+#   context floor; hermes-home/config.yaml overrides their declared context_length
+#   to 64000 to satisfy the harness. Keep inputs to those two under ~32-40K tokens.
+# - `review`/granite is cheap but its accuracy on hard rubrics is low, so several
+#   agents deliberately escalate to `quality` instead. That's the cost/quality dial.

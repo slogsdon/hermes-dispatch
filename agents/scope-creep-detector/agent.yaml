@@ -1,0 +1,22 @@
+# scope-creep-detector, classify a new client request against the agreed scope
+# Model: analyze → deepseek-r1:14b (9.0 GB), the roster's dedicated reasoning slot.
+# Deciding in/out/ambiguous against a contract is a judgment call (boundary-drawing,
+# implicit-vs-explicit), which is exactly what the reasoning model is for, and it's the
+# cheap reasoner, so we don't spend the 22 GB `quality` model on it.
+# NOTE: analyze/deepseek-r1 USED to be unusable in Hermes (its Ollama template hard-rejects
+# the tools array Hermes sends, "does not support tools"). The project home now disables
+# ALL toolsets, so zero tools are sent and analyze runs cleanly (verified, see the README's
+# tool-compatibility note). deepseek routes thinking to a separate channel that the project
+# config's show_reasoning:false suppresses; strip_reasoning + answer_anchor are an inert
+# belt-and-braces fallback.
+alias: analyze
+provider: litellm
+max_turns: 1
+toolsets: ""
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: false  # multi-section Markdown verdict, not one line
+strip_think: false       # deepseek's <think> is rendered to the reasoning channel, off in config
+strip_reasoning: true    # inert fallback; config already suppresses the "┌─ Reasoning" block
+answer_anchor: "## Verdict"   # first heading of the output; cut anything before it

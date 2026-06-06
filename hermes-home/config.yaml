@@ -1,0 +1,80 @@
+# hermes-home/config.yaml, lean, minimal-context project config for hermes-agents.
+# Goal: nothing Hermes would otherwise inject into the context window (tools, skills,
+# MCP, memory, base system prompt, persona, delegation) is left at its default, each is
+# explicitly blanked here. Per-agent system prompts arrive via the runner's -q; the only
+# thing with no built-in default is the custom LiteLLM provider, kept in full below.
+_config_version: 23
+
+model:
+  default: chat
+  provider: litellm
+
+agent:
+  max_turns: 60
+  tool_use_enforcement: auto
+  reasoning_effort: medium
+  system_prompt: ''            # no base persona prompt, agents supply their own via -q
+  personalities: {}            # drop the persona library
+  # Disable EVERY built-in toolset → zero tool definitions injected, no tool-grabbing.
+  disabled_toolsets:
+  - web
+  - browser
+  - terminal
+  - file
+  - code_execution
+  - vision
+  - video
+  - image_gen
+  - video_gen
+  - x_search
+  - moa
+  - tts
+  - skills
+  - todo
+  - memory
+  - session_search
+  - clarify
+  - delegation
+  - cronjob
+  - messaging
+  - homeassistant
+  - spotify
+  - yuanbao
+  - computer_use
+
+toolsets: []                   # no CLI plugin toolsets
+
+display:
+  show_reasoning: false        # no "┌─ Reasoning" block on stdout
+  personality: ''              # no persona
+
+security:
+  tirith_enabled: false        # no scanner warning on stdout
+
+memory:
+  memory_enabled: false        # no memory injection (~2.2K chars saved)
+  user_profile_enabled: false  # no user-profile injection (~1.4K chars saved)
+
+delegation:
+  orchestrator_enabled: false  # no sub-agent orchestration
+
+skills:
+  external_dirs: []            # no ambient skill injection
+
+custom_providers:
+- name: litellm
+  base_url: http://localhost:4000/v1
+  key_env: LITELLM_MASTER_KEY
+  api_mode: chat_completions
+  models:
+    classify:      { context_length: 128000 }
+    chat:          { context_length: 131072 }
+    review:        { context_length: 65536 }
+    code:          { context_length: 65536 }
+    analyze:       { context_length: 64000 }   # Hermes 64K floor (real num_ctx 40960)
+    pipeline:      { context_length: 64000 }   # Hermes 64K floor (real num_ctx 32768)
+    write:         { context_length: 131072 }
+    quality:       { context_length: 131072 }
+    analyze-judge: { context_length: 64000 }
+    review-judge:  { context_length: 64000 }
+    quality-judge: { context_length: 64000 }

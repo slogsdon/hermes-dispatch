@@ -1,0 +1,30 @@
+{
+  "name": "gtm-pipeline",
+  "description": "Plan a go-to-market campaign, write the launch copy, then generate social posts. Chains the quality planner → the long-form writer → the fast social model, each handing its output to the next.",
+  "steps": [
+    {
+      "id": "plan",
+      "agent": "gtm-planner",
+      "reads": "input",
+      "writes": "plan",
+      "format": "md",
+      "note": "quality (qwen3.6), brief → structured GTM plan (positioning, segments, channels, sequence)"
+    },
+    {
+      "id": "assets",
+      "agent": "gtm-executor",
+      "reads": "plan",
+      "writes": "assets",
+      "format": "md",
+      "note": "write (gpt-oss), plan → ready-to-ship launch assets (announcement, email, headlines, CTA)"
+    },
+    {
+      "id": "posts",
+      "agent": "social-media-marketer",
+      "reads": "assets",
+      "writes": "posts",
+      "format": "md",
+      "note": "chat (gemma4), assets → platform-tailored LinkedIn / X / thread posts"
+    }
+  ]
+}

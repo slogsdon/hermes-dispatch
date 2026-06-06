@@ -1,0 +1,16 @@
+# lead-designer, senior product-design direction & critique (text artifacts)
+# Model: quality → qwen3.6:35b-mlx (21.9 GB), best local judgment + long context for
+# reviewing full design specs (DESIGN.md, tokens.css, component markup). Design taste is
+# the one place the strongest model earns its RAM.
+# NOTE: no vision toolset, this critiques DESCRIBED/specced design (text), not pixels.
+alias: quality
+provider: litellm
+max_turns: 1
+toolsets: ""
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: false
+strip_think: false       # no inline <think> tags from qwen3.6
+strip_reasoning: true    # qwen3.6 prepends a "┌─ Reasoning" block to stdout, strip it
+answer_anchor: "## Read" # first heading of the critique; cut everything before it

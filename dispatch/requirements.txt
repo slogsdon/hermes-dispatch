@@ -1,0 +1,12 @@
+# Hermes Dispatch server: runtime dependencies
+#
+# The server (server.py) is intentionally PURE PYTHON STDLIB: http.server,
+# urllib, sqlite3, json, threading. No pip install is required to run it, so it
+# works under the system `python3` (and under launchd / a bare container) with
+# nothing to vendor.
+#
+# This file is kept as the canonical dependency manifest (Docker copies it) and
+# as the place to pin anything you add later. There are no third-party runtime
+# deps today. Uncomment below only if you extend the server.
+
+# requests>=2.31      # only if you replace the urllib HTTP calls

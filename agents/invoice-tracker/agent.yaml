@@ -1,0 +1,14 @@
+# invoice-tracker, extract invoice fields, emit minified JSON
+# Model: pipeline → lfm2:24b (14.4 GB), "fast structured tasks, NO thinking". Field
+# extraction from an invoice email/doc is exactly the structured-output sweet spot: one
+# pass, fixed schema, no reasoning. Chosen over `classify` (lfm2.5-thinking:1.2b) for the
+# same reason triage-router was, the thinking model streams CoT before the JSON and
+# mis-picks fields; pipeline emits clean JSON. parse_last_line is a belt-and-braces guard.
+alias: pipeline
+provider: litellm
+max_turns: 1
+toolsets: ""            # invoice text is piped/pasted in, no file access needed
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: true   # guarantee a single JSON object on stdout for piping to jq

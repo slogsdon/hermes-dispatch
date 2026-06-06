@@ -1,0 +1,20 @@
+# retro-generator, synthesize raw project notes into a structured retrospective
+# Model: analyze → deepseek-r1:14b, the roster's dedicated reasoning slot. A retro is a
+# reasoning/judgment task: read messy timeline notes, separate symptom from cause, and
+# derive durable changes. That's the analyze category (alongside meeting-to-actions and
+# decision-journal), not accuracy-critical compliance work that earns the 22 GB `quality`
+# model. analyze runs cleanly here because toolsets are disabled (deepseek-r1's template
+# rejects tool defs, but zero tools are sent, see README tool-compat note); deepseek routes
+# thinking to a separate channel, suppressed by show_reasoning:false, with strip_reasoning +
+# answer_anchor as the fallback.
+alias: analyze
+provider: litellm
+max_turns: 1
+toolsets: ""            # synthesis only, project notes are pasted/piped in
+ignore_rules: true      # do NOT inject the live vault/memory, keep the run deterministic
+ignore_user_config: false
+quiet: true
+parse_last_line: false  # full structured Markdown retro, not a single line
+strip_think: false
+strip_reasoning: true    # qwen3.6 prepends a "┌─ Reasoning" block to stdout, strip it
+answer_anchor: "## Wins"   # first heading of the retro; cut everything before it

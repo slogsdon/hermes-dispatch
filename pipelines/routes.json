@@ -1,0 +1,11 @@
+{
+  "description": "Maps a triage-router decision to a pipeline. triage-router emits inbox-routing enums (category/priority/route), NOT pipeline names, this is the thin adapter that turns a classification into a pipeline choice. Lookup order: by_route → by_category → default. Add pipelines and rows here as the roster grows; today everything actionable resolves to gtm-pipeline.",
+  "default": "gtm-pipeline",
+  "by_route": {
+    "project": "gtm-pipeline"
+  },
+  "by_category": {
+    "idea": "gtm-pipeline",
+    "task": "gtm-pipeline"
+  }
+}

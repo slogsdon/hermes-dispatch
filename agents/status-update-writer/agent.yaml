@@ -1,0 +1,15 @@
+# status-update-writer, turn done/blocked/next bullets into a clean client status update
+# Model: write → gpt-oss:20b (13.8 GB), the long-form writing slot. A client update is a
+# short composition task (tone, flow, restraint), which is what `write` is for; it's also
+# tool-compatible, unlike analyze.
+alias: write
+provider: litellm
+max_turns: 1
+toolsets: ""
+ignore_rules: true      # tone is set explicitly in the prompt, not by the vault persona
+ignore_user_config: false
+quiet: true
+parse_last_line: false
+strip_think: false
+strip_reasoning: true    # gpt-oss (write) prepends a "┌─ Reasoning" block to stdout, strip it
+answer_anchor: "## Status Update"   # first line of the update; cut anything before it

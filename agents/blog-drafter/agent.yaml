@@ -1,0 +1,16 @@
+# blog-drafter, long-form blog section drafter
+# Model: write → gemma4:26b-mlx, the roster's long-form prose slot. Blog drafting is
+# composition (tone, flow, paragraph structure), which is exactly what `write` is for;
+# `pipeline` (lfm2) is a fast structured-output model and the wrong tool for sustained prose.
+# The prior `pipeline` pick predates the roster rename, it avoided `write` back when that
+# alias mapped to gpt-oss:20b (a reasoning model that prepended a "┌─ Reasoning" block with
+# no heading to anchor a strip). `write` now resolves to gemma4:26b-mlx, which has NO
+# thinking channel, so output is clean prose with no reasoning block to strip.
+alias: write
+provider: litellm
+max_turns: 1            # one-shot draft; no tools, no loop
+toolsets: ""
+ignore_rules: true      # IMPORTANT: do not inherit Shane's vault/skill persona injection
+ignore_user_config: false
+quiet: true
+parse_last_line: false

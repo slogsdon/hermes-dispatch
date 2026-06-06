@@ -1,0 +1,35 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Model preset: NVIDIA 24 GB GPU (RTX 3090 / 4090)
+#
+# Same 8 aliases, mapped to CUDA-friendly quantized models available on Ollama.
+# 24 GB of dedicated VRAM is a different shape from Apple's shared 32 GB: VRAM is
+# NOT shared with the OS, so you get the full budget for the model, but 24 GB is
+# a hard wall, so the big `quality` slot uses a 32B at Q4 (~19-20 GB) that fits
+# alone. As on the Mac, keep the heavy model resident by itself; pipelines
+# serialize the large models for you.
+#
+# All tags are standard Ollama library models. Use `ollama pull <tag>` (without the
+# `ollama_chat/` prefix, which is only LiteLLM's routing prefix).
+#
+# Paste this `models:` block into config.yaml.
+# ─────────────────────────────────────────────────────────────────────────────
+models:
+  # alias      model                            ~VRAM @Q4   role
+  classify: "ollama_chat/qwen2.5:1.5b"        #   ~1.5 GB   tiny triage/routing
+  chat:     "ollama_chat/llama3.1:8b"         #   ~5 GB     fast conversational
+  review:   "ollama_chat/qwen2.5:7b"          #   ~5 GB     review/gate
+  code:     "ollama_chat/qwen2.5-coder:14b"   #   ~9 GB     code generation / samples
+  analyze:  "ollama_chat/deepseek-r1:14b"     #   ~9 GB     reasoning / arithmetic / judgment
+  pipeline: "ollama_chat/mistral-small:24b"   #  ~14 GB     fast structured output
+  write:    "ollama_chat/gemma2:27b"          #  ~16 GB     long-form prose
+  quality:  "ollama_chat/qwen2.5:32b"         #  ~19 GB     best quality; runs alone in 24 GB
+
+# Notes
+# -----
+# - If you have 12-16 GB VRAM, drop `quality`/`pipeline`/`write` to the 14B tier
+#   (qwen2.5:14b) or use examples/models-minimal.yaml.
+# - `codestral:22b` is a strong alternative for `code` if you have the VRAM.
+# - Multi-GPU: Ollama will shard a larger `quality` model (e.g. qwen2.5:72b) across
+#   cards. Bump it if you have 2x 24 GB and want maximum quality on the hard steps.
+# - The same 64K-context-floor note applies to `analyze`/`pipeline`. See
+#   hermes-home/config.yaml.

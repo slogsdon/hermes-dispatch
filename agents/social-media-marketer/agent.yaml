@@ -1,0 +1,12 @@
+# social-media-marketer, topic/draft → platform-tailored social posts
+# Model: chat → gemma4:e4b-mlx (9.6 GB), fast conversational. Short-form social copy is
+# high-iteration and short; right-size to the fast model, not the 20B writer.
+alias: chat
+provider: litellm
+max_turns: 1
+toolsets: ""
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: false
+strip_think: false       # gemma4's chat template forces think:false at the proxy → clean

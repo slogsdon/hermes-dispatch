@@ -1,0 +1,13 @@
+# gtm-executor, turn a GTM plan/brief into concrete, ready-to-ship launch assets
+# Model: write → gpt-oss:20b (13.8 GB), long-form writing slot for the actual copy.
+alias: write
+provider: litellm
+max_turns: 1
+toolsets: ""
+ignore_rules: true      # voice is set explicitly in the prompt, not by vault persona
+ignore_user_config: false
+quiet: true
+parse_last_line: false
+strip_think: false
+strip_reasoning: true    # gpt-oss (write) prepends a "┌─ Reasoning" block to stdout, strip it
+answer_anchor: "## Launch Announcement"   # first asset heading; cut everything before it

@@ -1,0 +1,17 @@
+# seo-reviewer, on-page SEO + AEO audit against a rubric
+# Model: quality → qwen3.6:35b-mlx (21.9 GB). Escalated from `review` (granite4.1:8b):
+# in testing granite made factual errors (called a 218-char meta "160/perfect", miscounted
+# headings) and miscalibrated severities. A qualitative audit needs the stronger reasoner.
+# qwen3.6 routes thinking to a separate channel, so the project config's show_reasoning:false
+# yields clean output; strip_reasoning + answer_anchor are a belt-and-braces fallback.
+alias: quality
+provider: litellm
+max_turns: 1
+toolsets: ""            # content is pasted/piped in, no fetching
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: false
+strip_think: false
+strip_reasoning: true    # fallback; config already suppresses the reasoning block
+answer_anchor: "## Verdict"   # first heading of the audit; cut anything before it

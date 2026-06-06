@@ -1,0 +1,15 @@
+# expense-classifier, tag transaction rows with a tax category, emit CSV
+# Model: pipeline → lfm2:24b (14.4 GB), "fast structured tasks, NO thinking". Batch
+# classification of many rows into a fixed category enum is the structured-output sweet
+# spot: one pass, no reasoning, deterministic-ish output. Chosen over `classify`
+# (lfm2.5-thinking:1.2b) for the same reason as triage-router, the thinking model streams
+# CoT and would interleave it with the rows, breaking the CSV.
+# NOTE: output is multi-row CSV, so parse_last_line is OFF (it would keep only the last row).
+alias: pipeline
+provider: litellm
+max_turns: 1
+toolsets: ""            # rows are piped/pasted in, no file access needed
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: false  # CSV is multi-line, must NOT collapse to the last line

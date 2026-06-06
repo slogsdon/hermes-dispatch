@@ -1,0 +1,15 @@
+# followup-drafter, last-interaction context → a short, natural follow-up email
+# Model: write → gpt-oss:20b (13.8 GB), long-form writing slot. The output is short (≤150
+# words) but the bar is natural, non-template prose; the 20B writer reads least like a
+# mail-merge of the available models.
+alias: write
+provider: litellm
+max_turns: 1
+toolsets: ""
+ignore_rules: true      # voice is set explicitly in the prompt, not by vault persona
+ignore_user_config: false
+quiet: true
+parse_last_line: false
+strip_think: false
+strip_reasoning: true    # gpt-oss (write) prepends a "┌─ Reasoning" block to stdout, strip it
+answer_anchor: "## Follow-up Email"   # the single output heading; cut anything before it

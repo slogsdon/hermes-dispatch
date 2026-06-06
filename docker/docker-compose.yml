@@ -1,0 +1,84 @@
+# hermes-dispatch: DIFM (Do It For Me) container stack.
+#
+#   cd docker && cp .env.example .env   # edit .env
+#   docker compose up -d
+#   docker compose logs -f dispatch     # → http://localhost:7777
+#
+# Services:
+#   bootstrap  one-shot: generates the LiteLLM config from .env (then exits)
+#   litellm    the proxy gateway serving the 8 aliases (depends on bootstrap)
+#   dispatch   the mobile dispatch server + UI (stdlib Python, no build deps)
+#
+# Note: the per-agent shell wrappers and pipelines run on the HOST (they need
+# Hermes + your shell), pointed at this stack's LiteLLM on :4000. This compose
+# file serves the dispatch + gateway layer. See ../docs/difm.md.
+
+name: hermes-dispatch
+
+services:
+  bootstrap:
+    image: alpine:3.20
+    env_file: .env
+    environment:
+      CONFIG_OUT: /config/litellm.config.yaml
+    volumes:
+      - litellm_config:/config
+      - ./bootstrap.sh:/bootstrap.sh:ro
+    command: ["sh", "/bootstrap.sh"]
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    restart: unless-stopped
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    env_file: .env
+    ports:
+      - "4000:4000"
+    volumes:
+      - litellm_config:/config:ro
+    # Reach a model backend running on the host (e.g. Ollama on :11434).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: ["--config", "/config/litellm.config.yaml", "--port", "4000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:4000/health/liveliness').status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  dispatch:
+    image: python:3.12-slim
+    restart: unless-stopped
+    depends_on:
+      litellm:
+        condition: service_started
+    env_file: .env
+    environment:
+      HERMES_HOME: /hermes
+      LITELLM_BASE: http://litellm:4000/v1
+      HERMES_DISPATCH_HOST: "0.0.0.0"
+      HERMES_DISPATCH_PORT: "7777"
+      HERMES_ROUTER_MODEL: "pipeline"
+      HERMES_DISPATCHER_MODEL: "analyze"
+    ports:
+      - "7777:7777"
+    volumes:
+      - ../:/app:ro          # the repo (agents/, dispatch/, bin/, hermes-home/)
+      - hermes_home:/hermes  # writable Hermes home: profiles/, .env
+    working_dir: /app
+    # First run: write the LiteLLM key where the server expects it, materialize a
+    # profile per agent into the volume, then start the stdlib server.
+    command:
+      - bash
+      - -c
+      - |
+        set -e
+        mkdir -p /hermes
+        printf 'LITELLM_MASTER_KEY=%s\n' "${LITELLM_MASTER_KEY}" > /hermes/.env
+        HERMES_AGENTS_PROFILE_HOME=/hermes bash bin/gen-profiles.sh
+        exec python3 dispatch/server.py
+
+volumes:
+  litellm_config:
+  hermes_home:

@@ -1,0 +1,39 @@
+# User config, holds machine-local paths and the alias→model map.
+# Ship config.example.yaml; never commit config.yaml.
+/config.yaml
+config.yaml.bak
+
+# Secrets / environment
+.env
+docker/.env
+hermes-home/.env
+hermes-home/auth.json
+
+# Hermes runtime home (state/sessions/secrets, never committed)
+.cache/
+hermes-home/state*
+hermes-home/sessions/
+
+# Pipeline run state (transient; keep the dir, ignore contents)
+/run/*
+!/run/.gitkeep
+
+# Dispatch server local state
+.hermes-dispatch/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Node (if a UI build is ever added)
+node_modules/
+
+# Logs / scratch
+*.log
+*.out
+out/
+/tmp/
+
+# OS cruft
+.DS_Store
