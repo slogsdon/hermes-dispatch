@@ -46,6 +46,8 @@ from pathlib import Path
 
 HOST = os.environ.get("HERMES_DISPATCH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("HERMES_DISPATCH_PORT", "7777"))
+# Cap request bodies so a bogus/huge Content-Length can't make the server allocate without bound.
+MAX_BODY_BYTES = int(os.environ.get("HERMES_DISPATCH_MAX_BODY", str(8 * 1024 * 1024)))
 HERMES_HOME = Path(os.environ.get("HERMES_HOME", str(Path.home() / ".hermes")))
 PROFILES_DIR = HERMES_HOME / "profiles"
 ENV_FILE = HERMES_HOME / ".env"
@@ -731,6 +733,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def _read_body(self) -> dict:
         length = int(self.headers.get("Content-Length", "0"))
+        if length < 0 or length > MAX_BODY_BYTES:
+            raise ValueError(f"request body too large or invalid: {length}")
         return json.loads(self.rfile.read(length) or b"{}")
 
     def _open_sse(self):
