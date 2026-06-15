@@ -110,8 +110,17 @@ ARGS=(chat -q "$FULL_PROMPT" -m "$ALIAS" --provider "$PROVIDER" \
 [[ "$IGNORE_USER_CONFIG" == "true" ]] && ARGS+=(--ignore-user-config)
 [[ "$QUIET" == "true" ]]              && ARGS+=(-Q)
 
+# Resolve the hermes binary by absolute path rather than trusting the ambient PATH. Under a
+# launchd daemon (e.g. the dispatch server) PATH is minimal — /opt/homebrew/bin:/usr/bin:/bin
+# :/usr/sbin:/sbin — and excludes ~/.local/bin where the hermes wrapper often lives, so a bare
+# `hermes` exits 127 ("command not found") and kills the pipeline at its first agent. Prefer an
+# explicit override, then a PATH lookup, then the common install path.
+HERMES_BIN="${HERMES_BIN:-$(command -v hermes 2>/dev/null || true)}"
+[[ -n "$HERMES_BIN" ]] || HERMES_BIN="$HOME/.local/bin/hermes"
+[[ -x "$HERMES_BIN" ]] || { echo "hermes-run: hermes binary not found at '$HERMES_BIN' (set HERMES_BIN)" >&2; exit 127; }
+
 if [[ "${HERMES_DRY_RUN:-}" == "1" ]]; then
-  printf 'hermes'; printf ' %q' "${ARGS[@]}"; printf '\n'
+  printf '%q' "$HERMES_BIN"; printf ' %q' "${ARGS[@]}"; printf '\n'
   exit 0
 fi
 
@@ -154,7 +163,7 @@ post_reasoning() {
 strip_status() { sed '/Reached maximum iterations/d'; }
 
 if [[ "$PARSE_LAST_LINE" == "true" ]]; then
-  hermes "${ARGS[@]}" | strip_status | post_think | post_reasoning | awk 'NF{last=$0} END{if(last!="")print last}'
+  "$HERMES_BIN" "${ARGS[@]}" | strip_status | post_think | post_reasoning | awk 'NF{last=$0} END{if(last!="")print last}'
 else
-  hermes "${ARGS[@]}" | strip_status | post_think | post_reasoning
+  "$HERMES_BIN" "${ARGS[@]}" | strip_status | post_think | post_reasoning
 fi
