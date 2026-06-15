@@ -1,0 +1,7 @@
+# Conservative lint config for the project's stdlib-only Python.
+# CI hard-gates on the bug-class subset (E9,F63,F7,F82); this fuller set is advisory
+# until the M3.1 cleanup pass. Run locally with: ruff check .
+line-length = 100
+
+[lint]
+select = ["E", "F", "W"]

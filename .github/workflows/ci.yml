@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test/lint deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq shellcheck
+          python -m pip install --upgrade ruff
+
+      # Hard gate: the test net (stdlib unittest + the orchestrate state-machine harness).
+      - name: Tests
+        run: tests/run.sh
+
+      # Hard gate: real bug classes only (syntax errors, undefined names) — never style.
+      - name: Ruff (bug-class)
+        run: ruff check --select=E9,F63,F7,F82 dispatch lib tests
+
+      # Advisory — surfaced in logs, does not fail the build.
+      - name: Ruff (full, advisory)
+        continue-on-error: true
+        run: ruff check .
+
+      - name: Shellcheck (advisory)
+        continue-on-error: true
+        run: shellcheck -S warning lib/*.sh bin/*.sh tests/*.sh
