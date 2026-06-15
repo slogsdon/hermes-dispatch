@@ -81,6 +81,13 @@ HERE = Path(__file__).resolve().parent
 INDEX = HERE / "index.html"
 HIDDEN_PROFILES = {"default"}
 
+# Pipeline execution (multi-step orchestration via bin/run-pipeline.sh). The dispatch server
+# can run a whole pipeline (e.g. dev-workflow) for a "pipeline"-type session, not just one agent.
+REPO_ROOT = HERE.parent
+PIPELINES_DIR = REPO_ROOT / "pipelines"
+RUN_ROOT = REPO_ROOT / "run"
+RUN_PIPELINE_SH = REPO_ROOT / "bin" / "run-pipeline.sh"
+
 _hist_lock = threading.Lock()
 
 
@@ -186,14 +193,100 @@ def save_session(s: dict) -> None:
     tmp.replace(f)
 
 
-def create_session(stype: str = "dispatch", agent: str | None = None) -> dict:
+def create_session(stype: str = "dispatch", agent: str | None = None,
+                   pipeline: str | None = None) -> dict:
     now = datetime.datetime.now()
     sid = f"{now:%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:6]}"
-    s = {"id": sid, "type": stype, "agent": agent, "title": "",
+    s = {"id": sid, "type": stype, "agent": agent, "pipeline": pipeline, "title": "",
          "created_at": now.isoformat(timespec="seconds"),
          "updated_at": now.isoformat(timespec="seconds"), "pinned": None, "turns": []}
     save_session(s)
     return s
+
+
+def set_session_meta(sid: str, **fields) -> None:
+    """Set top-level session fields (e.g. pipeline_run_id, pipeline_status) under the lock."""
+    with _hist_lock:
+        s = load_session(sid)
+        if s:
+            s.update(fields)
+            s["updated_at"] = _now()
+            save_session(s)
+
+
+def discover_pipelines() -> dict:
+    """name -> {description, steps, n_steps} from pipelines/*.json (skips routes.json)."""
+    out: dict = {}
+    if not PIPELINES_DIR.is_dir():
+        return out
+    for f in sorted(PIPELINES_DIR.glob("*.json")):
+        if f.name == "routes.json":
+            continue
+        try:
+            d = json.loads(f.read_text())
+        except Exception:
+            continue
+        name = d.get("name") or f.stem
+        steps = d.get("steps", []) or []
+        out[name] = {
+            "name": name,
+            "description": (d.get("description") or "")[:400],
+            "steps": [s.get("id") for s in steps],
+            "n_steps": len(steps),
+        }
+    return out
+
+
+def _step_output_summary(rd: Path, step: dict) -> str:
+    """A one-line summary for a finished step: the first non-empty line of its
+    written output, or (on failure) the last line of its captured stderr. Trimmed
+    to a phone-friendly length. Best-effort — never raises."""
+    of = step.get("output_file")
+    if of:
+        try:
+            text = (rd / of).read_text(encoding="utf-8", errors="replace")
+            first = next((ln.strip() for ln in text.splitlines() if ln.strip()), "")
+            if first:
+                return first[:160]
+        except OSError:
+            pass
+    if step.get("status") == "error":
+        try:
+            errs = (rd / f"{step.get('id', '')}.stderr").read_text(
+                encoding="utf-8", errors="replace").splitlines()
+            tail = next((ln.strip() for ln in reversed(errs) if ln.strip()), "")
+            if tail:
+                return tail[:160]
+        except OSError:
+            pass
+    return ""
+
+
+def pipeline_status_snapshot(run_id: str, pipeline: str | None = None) -> dict | None:
+    """Normalized progress snapshot for a run, read from its state.json. Powers the
+    /pipeline-status poll the client uses to re-attach to an in-flight run after a
+    reload (when there's no live SSE stream to subscribe to). None if no such run."""
+    rd = RUN_ROOT / (run_id or "")
+    try:
+        state = json.loads((rd / "state.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    pname = pipeline or state.get("pipeline") or ""
+    meta = discover_pipelines().get(pname, {})
+    steps = []
+    for st in state.get("steps", []):
+        status = st.get("status", "")
+        steps.append({
+            "id": st.get("id", ""),
+            "agent": st.get("agent", "") or "",
+            "status": status,
+            "exit_code": st.get("exit_code"),
+            "cycle": st.get("revision_cycles"),
+            "summary": _step_output_summary(rd, st) if status in ("done", "error") else "",
+        })
+    return {"run_id": run_id, "pipeline": pname, "status": state.get("status", ""),
+            "n_steps": meta.get("n_steps") or len(steps),
+            "step_ids": meta.get("steps") or [], "steps": steps}
 
 
 def _title_from(text: str) -> str:
@@ -721,6 +814,14 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"agents": [
                 {"name": n, "model": p["model"], "desc": p["desc"]} for n, p in profs.items()
             ]})
+        if path == "/pipelines":
+            return self._json(200, {"pipelines": list(discover_pipelines().values())})
+        if path == "/pipeline-status":
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            snap = pipeline_status_snapshot((qs.get("run_id") or [""])[0])
+            if snap is None:
+                return self._json(404, {"error": "no such run"})
+            return self._json(200, snap)
         if path == "/sessions":
             return self._json(200, {"sessions": list_sessions()})
         if path == "/session":
@@ -755,6 +856,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._dispatch_endpoint()
         if self.path == "/run":
             return self._run_endpoint()
+        if self.path == "/run-pipeline":
+            return self._run_pipeline_endpoint()
+        if self.path == "/resume-pipeline":
+            return self._resume_pipeline_endpoint()
         return self._send(404, b"not found", "text/plain")
 
     def _create_session_endpoint(self):
@@ -763,15 +868,209 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return self._json(400, {"error": "bad request body"})
         stype = payload.get("type", "dispatch")
-        if stype not in ("dispatch", "direct"):
+        if stype not in ("dispatch", "direct", "pipeline"):
             stype = "dispatch"
         agent = payload.get("agent")
+        pipeline = None
         if stype == "direct":
             if agent not in read_profiles():
                 return self._json(400, {"error": f"unknown agent: {agent}"})
+        elif stype == "pipeline":
+            agent = None
+            pipeline = str(payload.get("pipeline", "")).strip()
+            if pipeline not in discover_pipelines():
+                return self._json(400, {"error": f"unknown pipeline: {pipeline}"})
         else:
             agent = None
-        return self._json(200, {"session": create_session(stype, agent)})
+        return self._json(200, {"session": create_session(stype, agent, pipeline)})
+
+    def _run_pipeline_endpoint(self):
+        """Start an orchestrated pipeline (e.g. dev-workflow) for a pipeline session. Runs
+        bin/run-pipeline.sh as a background worker, streams step progress, surfaces step
+        outputs as artifacts, and pauses at the spec-approval gate."""
+        try:
+            payload = self._read_body()
+        except Exception:
+            return self._json(400, {"error": "bad request body"})
+        session_id = str(payload.get("session_id", "")).strip()
+        session = load_session(session_id)
+        if session is None:
+            return self._json(400, {"error": "valid session_id required"})
+        message = str(payload.get("message", "")).strip()
+        if not message:
+            return self._json(400, {"error": "message is required"})
+        pipeline = session.get("pipeline") or str(payload.get("pipeline", "")).strip()
+        if pipeline not in discover_pipelines():
+            return self._json(400, {"error": f"unknown pipeline: {pipeline}"})
+        self._open_sse()
+        if not RUN_PIPELINE_SH.exists():
+            return self._pump(lambda push: push({"type": "error", "message": "run-pipeline.sh not found"}))
+        append_session_turn(session_id, {
+            "timestamp": _now(), "user_input": message, "agent_selected": pipeline,
+            "domain": "pipeline", "expanded_prompt": "", "agent_response": "",
+            "status": "running", "artifact_id": "", "kind": "pipeline-input"})
+        self._pump(lambda push: self._pipeline_worker(push, session_id, pipeline, message, None))
+
+    def _resume_pipeline_endpoint(self):
+        """Approve the gate and resume a paused pipeline run through to completion."""
+        try:
+            payload = self._read_body()
+        except Exception:
+            return self._json(400, {"error": "bad request body"})
+        session_id = str(payload.get("session_id", "")).strip()
+        session = load_session(session_id)
+        if session is None:
+            return self._json(400, {"error": "valid session_id required"})
+        run_id = str(payload.get("run_id", "") or session.get("pipeline_run_id", "")).strip()
+        if not run_id or not (RUN_ROOT / run_id / "state.json").exists():
+            return self._json(400, {"error": "valid run_id required"})
+        pipeline = session.get("pipeline") or ""
+        self._open_sse()
+        append_session_turn(session_id, system_turn("✔ Spec approved — building…", True, "pipeline"))
+        self._pump(lambda push: self._pipeline_worker(push, session_id, pipeline, None, run_id))
+
+    def _pipeline_worker(self, push, session_id, pipeline, message, run_id):
+        """Drive run-pipeline.sh, relay progress, and finalize from state.json. Runs to
+        completion even if the client disconnects (the run dir + session persist progress)."""
+        resume = run_id is not None
+        cmd = (["bash", str(RUN_PIPELINE_SH), "--resume", run_id] if resume
+               else ["bash", str(RUN_PIPELINE_SH), pipeline, message])
+        set_session_meta(session_id, pipeline_status="running")
+        meta = discover_pipelines().get(pipeline, {})
+        reported: set = set()
+        push({"type": "pipeline-start", "pipeline": pipeline, "resume": resume,
+              "run_id": run_id or "", "n_steps": meta.get("n_steps", 0),
+              "step_ids": meta.get("steps", [])})
+        if run_id:                       # resume: backfill steps already done on a prior pass
+            self._emit_step_dones(push, RUN_ROOT / run_id, reported)
+        step_re = re.compile(r"→ (\S+): (\S+)")
+        tool_re = re.compile(r"⚙ (\S+): (\S+)")
+        runid_re = re.compile(r"run (\d\S+?)(?:\s*\[resume\])?\s*$")
+        cycle_re = re.compile(r"⟳ (\S+): test cycle (\d+)")
+        try:
+            # Decode the merged stdout as UTF-8 with errors="replace": the orchestrator emits
+            # multibyte progress glyphs (→ ▸ ✓ ⟳), and under launchd the locale's preferred
+            # encoding may not be UTF-8 — a strict decode there would kill the whole live stream
+            # on the first glyph. errors="replace" keeps the parse alive on any stray byte too.
+            proc = subprocess.Popen(cmd, cwd=str(REPO_ROOT), env=dict(os.environ),
+                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                    text=True, bufsize=1, encoding="utf-8", errors="replace")
+        except Exception as e:
+            push({"type": "error", "message": f"failed to start pipeline: {e}"})
+            return
+        for line in proc.stdout:
+            line = line.rstrip("\n")
+            if not line:
+                continue
+            if not run_id:
+                m = runid_re.search(line)
+                if m:
+                    run_id = m.group(1)
+                    set_session_meta(session_id, pipeline_run_id=run_id)
+                    push({"type": "pipeline-run", "run_id": run_id})
+            ms = step_re.search(line) or tool_re.search(line)
+            if ms:
+                if run_id:               # flush the step that just finished before this one starts
+                    self._emit_step_dones(push, RUN_ROOT / run_id, reported)
+                append_session_turn(session_id, system_turn(f"▸ {ms.group(1)} ({ms.group(2)})…", True, "pipeline"))
+                push({"type": "pipeline-step", "id": ms.group(1), "agent": ms.group(2)})
+                continue
+            mc = cycle_re.search(line)
+            if mc:
+                push({"type": "pipeline-cycle", "id": mc.group(1), "cycle": int(mc.group(2))})
+                continue
+            if "tests GREEN" in line or "gate '" in line:
+                push({"type": "pipeline-note", "text": line.strip()})
+        try:
+            proc.wait(timeout=10)
+        except Exception:
+            pass
+        if run_id:                       # flush the final step(s) before the terminal event
+            self._emit_step_dones(push, RUN_ROOT / run_id, reported)
+        self._pipeline_finalize(push, session_id, pipeline, run_id)
+
+    def _emit_step_dones(self, push, rd, reported: set) -> None:
+        """Push a `pipeline-step-done` (with exit code + one-line output summary) for each
+        step in state.json that has finished since the last flush. Idempotent via `reported`,
+        so steps are reported exactly once across the run's lifetime."""
+        try:
+            state = json.loads((rd / "state.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return
+        for st in state.get("steps", []):
+            sid, status = st.get("id"), st.get("status")
+            if not sid or sid in reported or status not in ("done", "error"):
+                continue
+            reported.add(sid)
+            push({"type": "pipeline-step-done", "id": sid, "agent": st.get("agent", "") or "",
+                  "ok": status == "done", "exit_code": st.get("exit_code"),
+                  "summary": _step_output_summary(rd, st)})
+
+    def _pipeline_finalize(self, push, session_id, pipeline, run_id):
+        rd = RUN_ROOT / (run_id or "")
+        try:
+            state = json.loads((rd / "state.json").read_text(encoding="utf-8"))
+        except Exception:
+            state = {}
+        status = state.get("status", "error")
+        if status == "paused":
+            paused = next((s for s in reversed(state.get("steps", []))
+                           if s.get("status") in ("paused", "needs-human")), {})
+            pid = paused.get("id", "")
+            if paused.get("status") == "needs-human":          # validate escalation
+                susp = paused.get("suspected_bad_tests", "")
+                arts = self._surface_keys(session_id, rd, state,
+                                          ["validated", "code", "tests_audited", "tests"], pipeline)
+                txt = f"⚠ Validation stuck at '{pid}' — tests still failing after the cycle cap."
+                if susp:
+                    txt += f" Suspected incorrect test(s): {susp}"
+                append_session_turn(session_id, system_turn(txt, False, "pipeline"))
+                set_session_meta(session_id, pipeline_status="needs-human")
+                push({"type": "pipeline-escalation", "run_id": run_id, "step": pid,
+                      "suspected_bad_tests": susp, "artifacts": arts})
+            else:                                              # human gate (e.g. spec-approval)
+                arts = self._surface_keys(session_id, rd, state, ["plan", "directions", "brief"], pipeline)
+                append_session_turn(session_id, system_turn(
+                    f"⏸ Spec ready (paused at '{pid}'). Review it, then Approve to build.", True, "pipeline"))
+                set_session_meta(session_id, pipeline_status="paused")
+                push({"type": "gate", "run_id": run_id, "step": pid, "artifacts": arts})
+        elif status == "complete":
+            arts = self._surface_keys(session_id, rd, state,
+                                      ["validated", "review", "security", "release", "pr"], pipeline)
+            append_session_turn(session_id, system_turn("✓ Pipeline complete — validated solution ready.", True, "pipeline"))
+            set_session_meta(session_id, pipeline_status="complete")
+            push({"type": "pipeline-done", "status": "complete", "run_id": run_id, "artifacts": arts})
+        else:
+            append_session_turn(session_id, system_turn(f"✗ Pipeline ended: {status}.", False, "pipeline"))
+            set_session_meta(session_id, pipeline_status=status)
+            push({"type": "pipeline-done", "status": status, "run_id": run_id, "artifacts": []})
+
+    def _surface_keys(self, session_id, rd, state, keys, pipeline):
+        """Read produced run keys, persist each as a dispatch artifact + session turn.
+        Returns [{key, artifact_id, title}] for keys present in state."""
+        out = []
+        kmap = state.get("keys", {})
+        for key in keys:
+            meta = kmap.get(key)
+            if not meta:
+                continue
+            f = rd / meta.get("file", "")
+            if not f.exists():
+                continue
+            try:
+                # errors="replace": agent output isn't guaranteed clean UTF-8 (a stray byte
+                # would otherwise drop the key silently, surfacing nothing for that step).
+                content = f.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            label = f"{pipeline}-{key}"
+            art_id = write_artifact(label, content, "", pipeline, uuid.uuid4().hex[:12], session_id) or ""
+            append_session_turn(session_id, {
+                "timestamp": _now(), "user_input": "", "agent_selected": label,
+                "domain": "pipeline", "expanded_prompt": "", "agent_response": content,
+                "status": "ok", "artifact_id": art_id, "kind": "pipeline-output", "pipeline_key": key})
+            out.append({"key": key, "artifact_id": art_id, "title": label})
+        return out
 
     def _obsidian_save_endpoint(self):
         """Manual 'Save to Obsidian' button, save a specific artifact by id."""
