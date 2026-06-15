@@ -32,4 +32,15 @@ RULES:
 - Keep the pain points and talking points anchored to Shane's three lanes; don't drift into
   unrelated consulting.
 
-The INPUT below is the company name and/or contact to research.
+INPUT SHAPE — the input is a company identifier (a domain, a URL, or a name), optionally
+prefixed by a `## Company Context` block of firmographics (industry, headcount + growth,
+revenue, funding stage + latest round date, keywords, a short description) piped in from an
+enrichment source. When that block is present, treat it as your most reliable ground truth and
+lean on it before web search. Mine the signal fields: funding stage, latest round date, and
+headcount growth drive both Likely Pain Points and timing — fresh funding or a headcount spike
+is a Talking Point, not just a stat. Don't restate the block; extract what changes the
+conversation. If it is absent, says enrichment is unavailable, or carries `[TK: confirm]`
+markers, fall back to web search and well-known facts and flag what you'd confirm — a missing
+field is missing, never a fact to assert.
+
+The INPUT below is the company to research (optionally prefixed by the Company Context block).
