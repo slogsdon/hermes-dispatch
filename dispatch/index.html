@@ -84,6 +84,25 @@
   .sysmsg.err { color:var(--err); border-color:#5a2730; }
   .sysmsg strong { color:var(--text); font-weight:650; }
   .sysmsg code { background:#0b0d10; padding:1px 5px; border-radius:5px; font-size:12.5px; }
+  /* pipeline progress panel */
+  .pipe { align-self:stretch; max-width:100%; background:var(--panel); border:1px solid var(--line);
+    border-radius:12px; padding:11px 13px; }
+  .pipe .phead { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .pipe .ptitle { font-weight:600; font-size:14px; letter-spacing:-0.005em; color:var(--text); }
+  .pipe .pcount { margin-left:auto; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:10.5px; letter-spacing:0.04em; color:var(--muted); white-space:nowrap; }
+  .pstep { display:flex; gap:9px; padding:7px 0; border-top:1px solid var(--line); }
+  .pstep:first-child { border-top:0; }
+  .pstep .pic { flex:0 0 16px; text-align:center; line-height:1.4; color:var(--muted); }
+  .pstep .pbody { flex:1; min-width:0; }
+  .pstep .pname { font-size:13.5px; color:var(--text); }
+  .pstep .pagent { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:10.5px; color:var(--muted); letter-spacing:0.03em; }
+  .pstep .psum { font-size:12px; color:var(--muted); line-height:1.4; margin-top:2px; word-break:break-word;
+    overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .pstep.pending { opacity:.45; }
+  .pstep.running .pname { color:var(--accent); font-weight:600; }
+  .pstep.done .pic { color:var(--ok); }
+  .pstep.err .pic, .pstep.err .psum { color:var(--err); }
+  .pstep.paused .pic { color:var(--text); }
   .ctxnote { align-self:flex-end; font-size:12px; color:var(--muted); margin:-4px 2px 0; }
   .ctxnote.refined { align-self:flex-start; color:var(--accent); }
   .editbox { width:100%; min-height:120px; background:var(--panel); color:var(--text); border:1px solid var(--line);
@@ -245,6 +264,7 @@ document.querySelectorAll("#bottomnav button").forEach(b => b.onclick = () => sh
 function setChatHeader() {
   if (!session) { $("title").textContent = "Hermes Dispatch"; $("sub").textContent = ""; return; }
   if (session.type === "direct") { $("title").textContent = "📋 " + session.agent; $("sub").textContent = "direct"; }
+  else if (session.type === "pipeline") { $("title").textContent = "⛓ " + (session.pipeline || "pipeline"); $("sub").textContent = "pipeline"; }
   else { $("title").textContent = "💬 Dispatch"; $("sub").textContent = `${AGENTS.length} agents`; }
 }
 
@@ -313,6 +333,8 @@ function artifactControls(turn, artifactId, agent) {
 
 function renderTurn(t) {
   if (t.kind === "system") { systemBubble(t.text || "", t.ok !== false); return; }
+  if (t.kind === "pipeline-input") { userBubble(t.user_input || ""); return; }
+  if (t.kind === "pipeline-output") { renderPipelineOutput(t); return; }
   const turn = userBubble(t.user_input);
   if (t.pinned_artifact_id) contextNote(turn, t.pinned_agent);
   if (t.agent_selected === "obsidian-save") { const b = systemBubble("📒 " + (t.agent_response||""), t.status!=="error"); return; }
@@ -384,12 +406,12 @@ function renderAgents() {
 }
 async function renderSessions() {
   const el = $("sessions-list");
-  el.innerHTML = ""; el.appendChild(newSessionBtn());
+  el.innerHTML = ""; el.appendChild(newSessionBtn()); el.appendChild(newPipelineBtn());
   let sessions = [];
   try { sessions = (await (await fetch("/sessions")).json()).sessions || []; } catch {}
   sessions.forEach(s => {
     const c = document.createElement("div"); c.className = "card";
-    const icon = s.type === "direct" ? "📋" : "💬";
+    const icon = s.type === "direct" ? "📋" : s.type === "pipeline" ? "⛓" : "💬";
     const agents = (s.agents||[]).map(a => `<span class="tag agent">${esc(a)}</span>`).join("");
     c.innerHTML = `<div class="top"><span class="title">${icon} ${esc(s.title)}</span></div>
       <div class="meta"><span>${esc(shortDate(s.updated_at))}</span><span class="tag">${s.turns} turns</span>${agents}</div>`;
@@ -413,8 +435,11 @@ async function openSession(id) {
     const turns = session.turns || [];
     if (turns.length) turns.forEach(renderTurn);
     else { const e = document.createElement("div"); e.className = "empty";
-      e.textContent = session.type === "direct" ? `Talking directly to ${session.agent}. Type your input below.` : "Ask for anything, the dispatcher picks the right agent.";
+      e.textContent = session.type === "direct" ? `Talking directly to ${session.agent}. Type your input below.`
+        : session.type === "pipeline" ? `Describe what to build. ${session.pipeline || "The pipeline"} plans it, pauses for your approval, then writes + tests it.`
+        : "Ask for anything, the dispatcher picks the right agent.";
       log.appendChild(e); }
+    if (session.type === "pipeline") maybeShowPipelineResume();
     showView("chat"); refreshPins(); scroll();
   } catch (e) {}
 }
@@ -425,6 +450,192 @@ async function newDispatchSession() {
 async function openDirectAgent(name) {
   const j = await (await fetch("/sessions", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ type:"direct", agent:name }) })).json();
   if (j.session) openSession(j.session.id);
+}
+
+// ---------- pipelines (multi-step orchestration) ----------
+function newPipelineBtn() {
+  const b = document.createElement("button"); b.className = "newbtn";
+  b.style.background = "var(--panel2)"; b.style.color = "var(--text)"; b.style.border = "1px solid var(--line)";
+  b.textContent = "⛓ New pipeline run"; b.onclick = choosePipeline; return b;
+}
+async function choosePipeline() {
+  const el = $("sessions-list"); el.innerHTML = "";
+  const back = document.createElement("button"); back.className = "newbtn";
+  back.style.background = "var(--panel2)"; back.style.color = "var(--text)"; back.style.border = "1px solid var(--line)";
+  back.textContent = "‹ Back"; back.onclick = renderSessions; el.appendChild(back);
+  let pls = []; try { pls = (await (await fetch("/pipelines")).json()).pipelines || []; } catch {}
+  if (!pls.length) {
+    const e = document.createElement("div"); e.className = "empty"; e.textContent = "No pipelines defined (add a pipelines/*.json)."; el.appendChild(e); return;
+  }
+  pls.forEach(p => {
+    const c = document.createElement("div"); c.className = "card";
+    c.innerHTML = `<div class="top"><span class="title">⛓ ${esc(p.name)}</span><span class="tag">${p.n_steps} steps</span></div><div class="meta desc"></div>`;
+    c.querySelector(".desc").textContent = p.description || "";
+    c.onclick = () => openPipelineSession(p.name);
+    el.appendChild(c);
+  });
+}
+async function openPipelineSession(name) {
+  const j = await (await fetch("/sessions", { method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ type:"pipeline", pipeline:name }) })).json();
+  if (j.session) openSession(j.session.id);
+}
+
+async function sendPipeline(text) {
+  if (busy || !text.trim() || !session) return;
+  setBusy(true); clearEmpty();
+  userBubble(text); scroll();
+  const pp = pipelinePanel();
+  try {
+    const resp = await fetch("/run-pipeline", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ session_id: session.id, message: text }) });
+    if (!resp.ok || !resp.body) throw new Error("HTTP " + resp.status);
+    await readSSE(resp, (ev) => handlePipelineEvent(ev, pp));
+  } catch (err) {
+    pp.finish();
+    systemBubble("⚠️ " + ((err && err.message) || err) + " — the pipeline may still be running; ↻ Refresh to check.", false);
+  } finally { setBusy(false); }
+}
+
+async function resumePipeline(runId) {
+  if (busy || !session) return;
+  setBusy(true);
+  const pp = pipelinePanel();
+  try {
+    const resp = await fetch("/resume-pipeline", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ session_id: session.id, run_id: runId }) });
+    if (!resp.ok || !resp.body) throw new Error("HTTP " + resp.status);
+    await readSSE(resp, (ev) => handlePipelineEvent(ev, pp));
+  } catch (err) {
+    pp.finish();
+    systemBubble("⚠️ " + ((err && err.message) || err) + " — building may still be running; ↻ Refresh to check.", false);
+  } finally { setBusy(false); }
+}
+
+function appendApproveButton(runId, label) {
+  if (!runId) return;
+  const turn = document.createElement("div"); turn.className = "turn";
+  const row = document.createElement("div"); row.className = "actionrow";
+  const ok = document.createElement("button"); ok.className = "act primary"; ok.textContent = label || "✅ Approve & build";
+  ok.onclick = () => { row.remove(); resumePipeline(runId); };
+  row.appendChild(ok); turn.appendChild(row); log.appendChild(turn); scroll();
+}
+
+function renderPipelineOutput(t) {
+  const turn = document.createElement("div"); turn.className = "turn";
+  const badge = document.createElement("div"); badge.className = "badge";
+  badge.innerHTML = `<span>📄</span><span class="nm"></span>`;
+  badge.querySelector(".nm").textContent = t.pipeline_key || t.agent_selected || "output";
+  turn.appendChild(badge);
+  const b = document.createElement("div"); b.className = "bubble agent";
+  if (t.agent_response) mdBubble(b, t.agent_response); else b.textContent = "(empty)";
+  turn.appendChild(b); log.appendChild(turn);
+  if (t.artifact_id) artifactControls(turn, t.artifact_id, t.agent_selected);
+}
+
+function maybeShowPipelineResume() {
+  if (!session || session.type !== "pipeline") return;
+  if (session.pipeline_status === "paused" && session.pipeline_run_id) {
+    appendApproveButton(session.pipeline_run_id, "✅ Approve spec & build");
+  } else if (session.pipeline_status === "needs-human" && session.pipeline_run_id) {
+    appendApproveButton(session.pipeline_run_id, "↻ Resume / retry build");
+  } else if (session.pipeline_status === "running" && session.pipeline_run_id) {
+    pollPipelineStatus(session.pipeline_run_id);
+  } else if (session.pipeline_status === "running") {
+    const turn = document.createElement("div"); turn.className = "turn";
+    const b = document.createElement("div"); b.className = "sysmsg"; b.innerHTML = `<span class="spinner"></span> pipeline running…`;
+    const row = document.createElement("div"); row.className = "actionrow";
+    const r = document.createElement("button"); r.className = "act"; r.textContent = "↻ Refresh"; r.onclick = () => openSession(session.id);
+    row.appendChild(r); turn.appendChild(b); turn.appendChild(row); log.appendChild(turn); scroll();
+  }
+}
+
+function pipelinePanel() {
+  const turn = document.createElement("div"); turn.className = "turn";
+  const el = document.createElement("div"); el.className = "pipe";
+  el.innerHTML = `<div class="phead"><span class="spinner"></span><span class="ptitle">Pipeline</span><span class="pcount"></span></div><div class="prows"></div>`;
+  turn.appendChild(el); log.appendChild(turn); scroll();
+  const rows = el.querySelector(".prows"), byId = new Map(), doneIds = new Set();
+  let total = 0;
+  const ICON = { pending:"○", running:`<span class="spinner"></span>`, done:"✓", error:"✗", paused:"⏸", "needs-human":"⏸" };
+  function paintCount() {
+    el.querySelector(".pcount").textContent =
+      total ? `step ${Math.min(doneIds.size, total)} of ${total}`
+            : (doneIds.size ? `${doneIds.size} step${doneIds.size > 1 ? "s" : ""}` : "");
+  }
+  function rowFor(id) {
+    let r = byId.get(id);
+    if (!r) {
+      r = document.createElement("div"); r.className = "pstep pending";
+      r.innerHTML = `<span class="pic">○</span><div class="pbody"><span class="pname"></span> <span class="pagent"></span><div class="psum"></div></div>`;
+      r.querySelector(".pname").textContent = id;
+      byId.set(id, r); rows.appendChild(r);
+    }
+    return r;
+  }
+  function update(id, status, { agent, summary, cycle } = {}) {
+    const r = rowFor(id);
+    const cls = status === "error" ? "err" : status === "running" ? "running"
+      : status === "done" ? "done" : (status === "paused" || status === "needs-human") ? "paused" : "pending";
+    r.className = "pstep " + cls;
+    r.querySelector(".pic").innerHTML = ICON[status] || "○";
+    if (agent) r.querySelector(".pagent").textContent = agent;
+    const sumEl = r.querySelector(".psum");
+    if (summary) sumEl.textContent = summary;
+    else if (status === "running" && cycle != null) sumEl.textContent = `running tests · cycle ${cycle}…`;
+    if (status === "done" || status === "error") { doneIds.add(id); paintCount(); }
+  }
+  return {
+    turn,
+    start(title, n, stepIds) {
+      el.querySelector(".ptitle").textContent = title;
+      if (n) total = n;
+      (stepIds || []).forEach(rowFor); paintCount(); scroll();
+    },
+    update,
+    finish() { const s = el.querySelector(".phead .spinner"); if (s) s.replaceWith(document.createTextNode("⛓")); },
+    remove() { turn.remove(); },
+  };
+}
+
+function handlePipelineEvent(ev, pp) {
+  switch (ev.type) {
+    case "pipeline-start": pp.start(ev.resume ? "Building" : "Planning", ev.n_steps, ev.step_ids); break;
+    case "pipeline-run": if (session) session.pipeline_run_id = ev.run_id; break;
+    case "pipeline-step": pp.update(ev.id, "running", { agent: ev.agent }); scroll(); break;
+    case "pipeline-step-done": {
+      const fallback = ev.ok ? "done" : ("failed" + (ev.exit_code != null ? ` (exit ${ev.exit_code})` : ""));
+      pp.update(ev.id, ev.ok ? "done" : "error", { agent: ev.agent, summary: ev.summary || fallback }); scroll(); break;
+    }
+    case "pipeline-cycle": pp.update(ev.id, "running", { cycle: ev.cycle }); scroll(); break;
+    case "pipeline-note": break;
+    case "gate":
+    case "pipeline-escalation":
+    case "pipeline-done": pp.finish(); openSession(session.id); break;
+    case "error": pp.remove(); systemBubble("⚠️ " + (ev.message || "pipeline error"), false); break;
+  }
+}
+
+function pollPipelineStatus(runId) {
+  const startSid = session.id;
+  const pp = pipelinePanel();
+  let fails = 0;
+  async function tick() {
+    if (!session || session.id !== startSid) return;   // user navigated away — stop polling
+    let snap = null;
+    try { const r = await fetch("/pipeline-status?run_id=" + encodeURIComponent(runId)); if (r.ok) snap = await r.json(); } catch {}
+    if (!snap) { if (++fails > 5) { pp.remove(); return; } return void setTimeout(tick, 2000); }
+    fails = 0;
+    const TITLE = { running:"Running", paused:"Paused", complete:"Complete", error:"Failed" };
+    pp.start(TITLE[snap.status] || "Pipeline", snap.n_steps, snap.step_ids);
+    snap.steps.forEach(s => pp.update(s.id, s.status, { agent: s.agent, summary: s.summary, cycle: s.cycle }));
+    if (["complete", "error", "paused"].includes(snap.status)) {
+      pp.finish(); openSession(session.id);
+      return;
+    }
+    setTimeout(tick, 2000);
+  }
+  tick();
 }
 
 // ---------- send (Tier 1+2 dispatch → optional edit → Tier 3 run) ----------
@@ -451,6 +662,7 @@ function savingBubble(turn) {
 
 async function send(text) {
   if (busy || !text.trim() || !session) return;
+  if (session.type === "pipeline") return sendPipeline(text);
   setBusy(true); clearEmpty();
   const turn = userBubble(text);
   if (pinned) contextNote(turn, pinned.agent);
