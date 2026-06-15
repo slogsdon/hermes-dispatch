@@ -43,3 +43,40 @@ Ignore this entirely. Every agent's output is plain Markdown on stdout, so pipe 
 ```bash
 ./agents/vault-distiller/run.sh < note.md > distilled.md
 ```
+
+## Memory feeders (CLI / pipeline)
+
+The server save above is the phone-facing path. For terminal and scripted use there are two
+companion feeders under `lib/`. Agents run a closed toolset and can't call the `obsidian` CLI
+themselves, so these do the vault I/O *around* an agent — read context in before it runs, write
+its output back after. Both require the optional `obsidian` CLI (`OBSIDIAN_BIN`, see above) and a
+running Obsidian; both **always exit 0** and degrade to a no-op when it's missing, so they never
+break a run. Both honor `HERMES_DRY_RUN=1`.
+
+**Read — `lib/obsidian-context.sh`** searches your vault and emits a `## Memory Context` block so
+an agent grounds its work in prior notes instead of starting cold:
+
+```bash
+echo "<task input>" | lib/obsidian-context.sh | ./agents/prospect-researcher/run.sh
+lib/obsidian-context.sh 'payments fintech ICP'                       # explicit query
+OBSIDIAN_CONTEXT_PATH='Context/Memory' lib/obsidian-context.sh '…'   # scope a folder
+```
+
+Env: `OBSIDIAN_QUERY`, `OBSIDIAN_CONTEXT_LIMIT` (default 5), `OBSIDIAN_CONTEXT_PATH` (folder
+scope), `OBSIDIAN_VAULT_NAME` (CLI vault selector; blank = active vault).
+
+**Write — `lib/obsidian-save.sh`** appends an agent's output to a vault note and commits it. It's
+**transparent** (stdout = stdin) so it can sit at the end of any pipe:
+
+```bash
+./agents/decision-journal/run.sh < input.md | lib/obsidian-save.sh 'Decision Log'
+OBSIDIAN_SAVE_DAILY=1 lib/obsidian-save.sh < out.md     # append to today's daily note
+```
+
+Env: `OBSIDIAN_SAVE_DAILY=1` / a note-name arg / `OBSIDIAN_SAVE_FILE` (target), `OBSIDIAN_VAULT`
+(filesystem path — the scoped git commit runs here; blank skips only the commit),
+`OBSIDIAN_VAULT_NAME`, `OBSIDIAN_SAVE_HEADING`, `OBSIDIAN_SAVE_LABEL`, `OBSIDIAN_NO_COMMIT=1`.
+
+> Wiring these as automatic `tool` steps inside a `pipelines/*.json` run needs the pipeline
+> executor to support non-agent steps, which this repo's `lib/orchestrate.sh` does not yet. For
+> now use them as the standalone pipe stages shown above.
