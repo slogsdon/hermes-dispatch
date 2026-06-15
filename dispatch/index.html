@@ -37,6 +37,25 @@
   .turn { display:flex; flex-direction:column; gap:8px; }
   .bubble { max-width:88%; padding:11px 14px; border-radius:16px; white-space:pre-wrap;
     word-wrap:break-word; overflow-wrap:anywhere; font-size:15.5px; line-height:1.5; }
+  /* rendered markdown (display only) — set on a bubble once its agent response completes */
+  .bubble.md { white-space:normal; }
+  .bubble.md > :first-child { margin-top:0; }
+  .bubble.md > :last-child { margin-bottom:0; }
+  .bubble.md h1, .bubble.md h2, .bubble.md h3, .bubble.md h4, .bubble.md h5, .bubble.md h6 {
+    font-weight:600; line-height:1.25; letter-spacing:-0.01em; margin:0.9em 0 0.35em; }
+  .bubble.md h1 { font-size:1.32em; } .bubble.md h2 { font-size:1.18em; }
+  .bubble.md h3 { font-size:1.06em; } .bubble.md h4, .bubble.md h5, .bubble.md h6 { font-size:1em; }
+  .bubble.md p { margin:0.55em 0; }
+  .bubble.md ul, .bubble.md ol { margin:0.5em 0; padding-left:1.4em; }
+  .bubble.md li { margin:0.2em 0; }
+  .bubble.md code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:0.86em; background:var(--panel2); padding:1px 5px; border-radius:4px; }
+  .bubble.md pre { background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin:0.6em 0; overflow-x:auto; }
+  .bubble.md pre code { background:none; padding:0; font-size:0.82em; line-height:1.5; white-space:pre; }
+  .bubble.md blockquote { margin:0.6em 0; padding:0.2em 0 0.2em 12px; border-left:2px solid var(--line); color:var(--muted); }
+  .bubble.md a { color:var(--accent); text-decoration:underline; text-underline-offset:2px; word-break:break-word; }
+  .bubble.md hr { border:0; border-top:1px solid var(--line); margin:1em 0; }
+  .bubble.md strong { font-weight:600; color:var(--text); }
+  .bubble.md em { font-style:italic; }
   .user { align-self:flex-end; background:var(--user); border-bottom-right-radius:5px; }
   .agent { align-self:flex-start; background:var(--agent); border:1px solid var(--line); border-bottom-left-radius:5px; }
   .pill { align-self:flex-start; max-width:88%; background:var(--panel2); border:1px solid var(--line);
@@ -154,6 +173,58 @@ let view = "chat";
 
 const esc = (s) => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const fmt = (s) => esc(s).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/`([^`]+)`/g,"<code>$1</code>").replace(/_([^_]+)_/g,"<em>$1</em>");
+// Minimal, dependency-free markdown → HTML for DISPLAY ONLY. Agent output is untrusted
+// (LLM-generated), so every line is HTML-escaped BEFORE any formatting and no raw HTML passes
+// through; links are restricted to http(s). The raw markdown is what's stored as the artifact,
+// saved to Obsidian, and passed to the next agent — this only changes how a response is shown.
+function renderMarkdown(src) {
+  const inline = (s) => esc(s)
+    .replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`)
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*\n]+)\*/g, "<em>$1</em>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  const lines = String(src == null ? "" : src).replace(/\r\n?/g, "\n").split("\n");
+  const out = []; let para = [], list = null, i = 0;
+  const flushPara = () => { if (para.length) { out.push("<p>" + para.map(inline).join("<br>") + "</p>"); para = []; } };
+  const flushList = () => { if (list) { out.push(`<${list.type}>` + list.items.map(it => "<li>" + inline(it) + "</li>").join("") + `</${list.type}>`); list = null; } };
+  const flush = () => { flushPara(); flushList(); };
+  while (i < lines.length) {
+    const ln = lines[i];
+    if (/^\s*```+/.test(ln)) {                                   // fenced code block
+      flush(); const body = []; i++;
+      while (i < lines.length && !/^\s*```+\s*$/.test(lines[i])) { body.push(lines[i]); i++; }
+      i++; out.push("<pre><code>" + esc(body.join("\n")) + "</code></pre>"); continue;
+    }
+    if (/^\s*$/.test(ln)) { flush(); i++; continue; }            // blank line
+    const mH = ln.match(/^\s*(#{1,6})\s+(.*)$/);
+    if (mH) { flush(); const l = mH[1].length; out.push(`<h${l}>` + inline(mH[2].replace(/\s+#+\s*$/, "")) + `</h${l}>`); i++; continue; }
+    if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(ln)) { flush(); out.push("<hr>"); i++; continue; }  // rule
+    const mUl = ln.match(/^\s*[-*+]\s+(.*)$/), mOl = ln.match(/^\s*\d+[.)]\s+(.*)$/);
+    if (mUl || mOl) {
+      const type = mUl ? "ul" : "ol";
+      if (!list || list.type !== type) { flush(); list = { type, items: [] }; }
+      list.items.push(mUl ? mUl[1] : mOl[1]); i++; continue;
+    }
+    if (/^\s*>\s?/.test(ln)) {                                   // blockquote
+      flush(); const q = [];
+      while (i < lines.length && /^\s*>\s?/.test(lines[i])) { q.push(lines[i].replace(/^\s*>\s?/, "")); i++; }
+      out.push("<blockquote>" + q.map(inline).join("<br>") + "</blockquote>"); continue;
+    }
+    flushList(); para.push(ln.trim()); i++;                      // paragraph line
+  }
+  flush();
+  return out.join("\n");
+}
+// Render raw markdown into a bubble for display. Pretty-printed JSON (structured agents) is
+// shown verbatim in a code block rather than mangled as markdown.
+function mdBubble(el, raw) {
+  el.classList.add("md");
+  const t = (raw == null ? "" : String(raw)).trim();
+  if (t[0] === "{" || t[0] === "[") {
+    try { JSON.parse(t); el.innerHTML = `<pre><code>${esc(t)}</code></pre>`; return; } catch (e) {}
+  }
+  el.innerHTML = renderMarkdown(raw);
+}
 const scroll = () => { log.scrollTop = log.scrollHeight; };
 function clearEmpty() { const e = $("empty"); if (e) e.remove(); }
 function shortTime(iso){ if(!iso) return ""; const d=new Date(iso); return isNaN(d)?"":d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}); }
@@ -250,7 +321,7 @@ function renderTurn(t) {
     const bubble = routingPill(turn, { agent:t.agent_selected, model:"", intent:t.dispatcher_reasoning,
       domain:t.domain, expanded:t.expanded_prompt, withPill });
     if (t.edited) refinedNote(turn);
-    if (t.agent_response) bubble.textContent = t.agent_response;
+    if (t.agent_response) mdBubble(bubble, t.agent_response);
     else { bubble.classList.add("err"); bubble.textContent = t.status === "pending" ? "(interrupted)" : "(no response)"; }
   }
   if (t.status === "ok" && t.artifact_id) artifactControls(turn, t.artifact_id, t.agent_selected);
@@ -443,6 +514,7 @@ async function runAgent(turn, bubble, ctx, expandedText, edited, originalText) {
       if (ev.type === "token") { if (!gotToken) { bubble.textContent = ""; gotToken = true; } bubble.textContent += ev.content; scroll(); }
       else if (ev.type === "done") {
         if (!gotToken) bubble.textContent = "(empty response)";
+        else mdBubble(bubble, bubble.textContent);   // swap raw stream → formatted markdown
         if (ev.edited) refinedNote(turn);
         if (ev.artifact_id) artifactControls(turn, ev.artifact_id, ev.agent);
       } else if (ev.type === "error") { actionBar(turn, ev.message || "error", originalText); }
