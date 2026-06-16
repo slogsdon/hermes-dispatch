@@ -89,6 +89,16 @@ class TestSessionTurns(unittest.TestCase):
     def test_append_to_missing_session_returns_none(self):
         self.assertIsNone(srv.append_session_turn("no_such_session", {"user_input": "x"}))
 
+    def test_delete_session_removes_existing(self):
+        s = srv.create_session("dispatch")
+        self.assertIsNotNone(srv.load_session(s["id"]))
+        self.assertTrue(srv.delete_session(s["id"]))
+        self.assertIsNone(srv.load_session(s["id"]))
+
+    def test_delete_session_missing_returns_false(self):
+        self.assertFalse(srv.delete_session("no_such_session"))
+        self.assertFalse(srv.delete_session(""))
+
 
 class TestReadBodyCap(unittest.TestCase):
     """QW4: _read_body must reject oversized / negative Content-Length before reading."""

@@ -193,6 +193,21 @@ def save_session(s: dict) -> None:
     tmp.replace(f)
 
 
+def delete_session(sid: str) -> bool:
+    """Delete a session file. Returns True if it existed and was removed."""
+    if not sid:
+        return False
+    with _hist_lock:
+        f = _sess_file(sid)
+        try:
+            if f.exists():
+                f.unlink()
+                return True
+        except OSError:
+            pass
+    return False
+
+
 def create_session(stype: str = "dispatch", agent: str | None = None,
                    pipeline: str | None = None) -> dict:
     now = datetime.datetime.now()
@@ -852,6 +867,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._pin_endpoint()
         if self.path == "/sessions":
             return self._create_session_endpoint()
+        if self.path == "/delete-session":
+            return self._delete_session_endpoint()
         if self.path == "/dispatch":
             return self._dispatch_endpoint()
         if self.path == "/run":
@@ -883,6 +900,17 @@ class Handler(BaseHTTPRequestHandler):
         else:
             agent = None
         return self._json(200, {"session": create_session(stype, agent, pipeline)})
+
+    def _delete_session_endpoint(self):
+        try:
+            payload = self._read_body()
+        except Exception:
+            return self._json(400, {"error": "bad request body"})
+        sid = str(payload.get("session_id", "")).strip()
+        if not sid:
+            return self._json(400, {"error": "session_id required"})
+        ok = delete_session(sid)
+        return self._json(200 if ok else 404, {"ok": ok})
 
     def _run_pipeline_endpoint(self):
         """Start an orchestrated pipeline (e.g. dev-workflow) for a pipeline session. Runs
