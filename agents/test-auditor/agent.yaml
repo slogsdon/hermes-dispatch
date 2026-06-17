@@ -1,0 +1,21 @@
+# test-auditor — audit generated tests for WRONG expectations before code is written (Step 4/5)
+# Model: max → qwen3.6:35b-mlx (21.9 GB) — best local reasoning. Catching a wrong hardcoded
+# expected value (the arithmetic the test author got wrong) is accuracy-critical judgment: a
+# bad test that slips through either blocks a correct implementation or forces buggy code, so
+# this earns the strongest reasoner over the coder model that wrote the tests. It re-derives
+# computed values from the spec and converts magic numbers to runtime-evaluated expressions so
+# the FIX can't re-introduce an arithmetic error (the "model never counts" principle, applied
+# to test expectations). Runs between test-designer and code-generator in the dev-workflow.
+# qwen3.6 routes thinking to a separate channel, so output is clean; strip_reasoning is a
+# belt-and-braces fallback.
+alias: max
+provider: litellm
+max_turns: 3            # review + rewrite the suite; one-shot in the pipeline
+toolsets: ""            # spec + tests are piped in (multi-key read) — no file access
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: false  # audit notes + the corrected test files, not one line
+strip_think: false
+strip_reasoning: true    # fallback; config's show_reasoning:false already suppresses the block
+answer_anchor: "## Audit"   # first heading of the output; cut anything before it

@@ -1,0 +1,19 @@
+# release-prep — change summary → pre-launch checklist + rollback + go/no-go (workflow Step 6)
+# Model: max → qwen3.6:35b-mlx (21.9 GB) — best local reasoning+judgment. This is the last
+# gate before production: judging launch risk, blast radius, and rollback reversibility (and
+# loudly flagging a destructive migration) is exactly the kind of judgment where a miss is
+# expensive, so it earns the strong reasoner over a cheaper writer. Local counterpart to
+# agent-skills:shipping-and-launch — a gap the workflow names.
+# qwen3.6 routes thinking to a separate channel, so the visible checklist is already clean;
+# strip_reasoning + answer_anchor are a belt-and-braces fallback.
+alias: max
+provider: litellm
+max_turns: 1            # one-shot gate over the change summary
+toolsets: ""            # the change summary is pasted/piped in — no repo/infra access
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: false  # multi-section Markdown checklist, not one line
+strip_think: false
+strip_reasoning: true    # fallback; config already suppresses the reasoning block
+answer_anchor: "## Pre-Flight Checklist"   # first heading; cut anything before it

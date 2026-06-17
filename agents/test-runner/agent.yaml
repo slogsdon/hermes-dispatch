@@ -1,0 +1,22 @@
+# test-runner — SHELL-ENABLED test-harness discovery agent (workflow Step 5, hybrid fallback)
+# Model: max → qwen3.6:35b-mlx (21.9 GB). This is the one agent that calls TOOLS (the terminal
+# toolset, enabled in its own test-runner/hermes-home/config.yaml — see that file and the
+# per-agent-home logic in lib/hermes-run.sh). It needs a model that reliably tool-calls;
+# qwen3.6 is the roster's confirmed tool-capable reasoner and backs both `max` and `reasoning`
+# (`max` chosen here for best judgment + tool use). Its job is DISCOVERY of how to run an odd project's
+# tests; the orchestrator (lib/test-runner.sh) re-runs the discovered commands deterministically
+# to capture the authoritative exit code — the model never self-reports pass/fail.
+#
+# Run it with cwd = the project/workspace so its shell commands operate there:
+#   ( cd <project> && AGENT… ) — the orchestrator's discovery hook does this.
+alias: max
+provider: litellm
+max_turns: 12           # needs several inspect→read→decide tool-call turns
+toolsets: terminal      # the shell tool; enabled via this agent's own hermes-home
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: true   # keep only the final JSON line (the discovered commands)
+strip_think: false
+strip_reasoning: true   # fallback; this agent's home also sets show_reasoning:false
+# no answer_anchor: parse_last_line already isolates the JSON object on the last line

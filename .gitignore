@@ -37,3 +37,18 @@ out/
 
 # OS cruft
 .DS_Store
+
+# Private overlay (layered from the hermes-private repo; never committed here)
+/agents/private/*
+!/agents/private/.gitkeep
+!/agents/private/README.md
+/lib/integrations/*
+!/lib/integrations/.gitkeep
+!/lib/integrations/README.md
+/pipelines/private/*
+!/pipelines/private/.gitkeep
+!/pipelines/private/README.md
+/docker/searxng
+/prompts.yaml
+/prompts.example.yaml
+/redline-report/

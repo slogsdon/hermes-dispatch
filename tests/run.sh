@@ -11,5 +11,13 @@ echo "### python unit tests"
 python3 -m unittest discover -s "$DIR" -p 'test_*.py' -v || rc=1
 
 echo ""
+echo "### shell: orchestrate state machine"
+"$DIR/test_orchestrate.sh" || rc=1
+
+echo ""
+echo "### shell: test-runner sandbox"
+"$DIR/test_testrunner.sh" || rc=1
+
+echo ""
 [ "$rc" -eq 0 ] && echo "ALL TESTS PASSED" || echo "TESTS FAILED"
 exit "$rc"

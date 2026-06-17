@@ -1,0 +1,19 @@
+# pr-describer — diff (+ commits) → PR title/summary/changes/test-plan/risk (workflow Step 6)
+# Model: writing → gemma4:26b-mlx (16.7 GB) — the roster's long-form writer. Turning a diff into
+# clear reviewer-facing prose (a why-focused summary, grouped changes, an honest test plan) is
+# a writing task, not accuracy-critical judgment, so it routes to the writer rather than the
+# 22 GB `max` model — same alias as proposal-writer / followup-drafter / gtm-executor. Local
+# counterpart to the PR step of superpowers:finishing-a-development-branch.
+# show_reasoning:false suppresses any reasoning block; strip_reasoning + answer_anchor are a
+# belt-and-braces fallback.
+alias: writing
+provider: litellm
+max_turns: 1            # one-shot: diff in, PR description out
+toolsets: ""            # the diff is piped/pasted in — no repo access
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: false  # multi-section Markdown PR body, not one line
+strip_think: false
+strip_reasoning: true    # fallback; config already suppresses the reasoning block
+answer_anchor: "## Title"   # first heading of the PR body; cut anything before it

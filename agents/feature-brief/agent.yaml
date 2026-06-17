@@ -1,0 +1,18 @@
+# feature-brief — raw idea → business-context brief (workflow Step 1, /biz-brief)
+# Model: max → qwen3.6:35b-mlx (21.9 GB) — best local reasoning+judgment. Framing the
+# commercial bet (persona, opportunity, monetization, KPIs, risks) from a thin idea is a
+# judgment task where a wrong frame poisons every downstream stage, so it earns the strong
+# reasoner over the cheaper models. This is the upstream artifact the brainstorm is fed.
+# qwen3.6 routes thinking to a separate channel, so the visible brief is already clean;
+# strip_reasoning + answer_anchor are a belt-and-braces fallback.
+alias: max
+provider: litellm
+max_turns: 4            # one-shot batch, OR a short interactive clarify before the brief
+toolsets: ""            # the idea is pasted/piped in — no fetching
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: false  # the brief is multi-section Markdown, not one line
+strip_think: false       # no inline <think> tags from qwen3.6
+strip_reasoning: true    # fallback; config's show_reasoning:false already suppresses the block
+answer_anchor: "## Persona"   # first heading of the brief; cut anything before it

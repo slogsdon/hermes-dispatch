@@ -1,0 +1,18 @@
+# impl-planner — chosen direction → ordered, testable implementation plan (workflow Step 3)
+# Model: max → qwen3.6:35b-mlx (21.9 GB) — best local reasoning+judgment. The plan is the
+# keystone artifact a developer or coding agent executes verbatim; a wrong decomposition or a
+# missing "done when" wastes the whole build, so this is accuracy-critical and earns the
+# strong reasoner over the cheaper models (the local counterpart to superpowers:writing-plans).
+# qwen3.6 routes thinking to a separate channel, so the visible plan is already clean;
+# strip_reasoning + answer_anchor are a belt-and-braces fallback.
+alias: max
+provider: litellm
+max_turns: 6            # interactive scope clarify, or a one-shot pass
+toolsets: ""            # the direction + context is pasted/piped in — no repo access
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: false  # the plan is multi-section Markdown, not one line
+strip_think: false       # no inline <think> tags from qwen3.6
+strip_reasoning: true    # fallback; config's show_reasoning:false already suppresses the block
+answer_anchor: "## Overview"   # first heading of the plan; cut anything before it
