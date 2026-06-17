@@ -126,6 +126,40 @@ class TestReadBodyCap(unittest.TestCase):
         self.assertEqual(self._call(0, b""), {})
 
 
+class TestPipelineSubprocessEnv(unittest.TestCase):
+    """pipeline_subprocess_env must carry the LiteLLM key to agents even when the server's
+    own environment lacks it (the launchd case): otherwise every agent's litellm call fails."""
+
+    def setUp(self):
+        self._saved = os.environ.get("LITELLM_MASTER_KEY")
+        os.environ.pop("LITELLM_MASTER_KEY", None)
+        self._saved_envfile = srv.ENV_FILE
+
+    def tearDown(self):
+        srv.ENV_FILE = self._saved_envfile
+        if self._saved is None:
+            os.environ.pop("LITELLM_MASTER_KEY", None)
+        else:
+            os.environ["LITELLM_MASTER_KEY"] = self._saved
+
+    def test_injects_key_from_env_file_when_absent_from_environ(self):
+        envfile = Path(_TMP) / ".env_under_test"
+        envfile.write_text('LITELLM_MASTER_KEY="sk-from-file"\n')
+        srv.ENV_FILE = envfile
+        env = srv.pipeline_subprocess_env()
+        self.assertEqual(env["LITELLM_MASTER_KEY"], "sk-from-file")
+
+    def test_existing_environ_key_is_respected(self):
+        os.environ["LITELLM_MASTER_KEY"] = "sk-from-environ"
+        env = srv.pipeline_subprocess_env()
+        self.assertEqual(env["LITELLM_MASTER_KEY"], "sk-from-environ")
+
+    def test_absent_key_stays_absent(self):
+        srv.ENV_FILE = Path(_TMP) / "does_not_exist.env"
+        env = srv.pipeline_subprocess_env()
+        self.assertNotIn("LITELLM_MASTER_KEY", env)
+
+
 class TestDeleteSession(unittest.TestCase):
     """delete_session removes the file and is safe on missing/empty ids."""
 

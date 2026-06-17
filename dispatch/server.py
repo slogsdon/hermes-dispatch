@@ -118,6 +118,24 @@ def litellm_key() -> str:
     return ""
 
 
+def pipeline_subprocess_env() -> dict:
+    """Environment for the pipeline subprocess (run-pipeline.sh → agents → hermes).
+
+    Under launchd the server's own environment has no LITELLM_MASTER_KEY (PATH is the
+    minimal launchd set), so a bare `dict(os.environ)` would hand every agent an env with
+    no key — yet the agents reach the litellm provider via `key_env: LITELLM_MASTER_KEY`.
+    The server already resolves the key for its own calls (env → ~/.hermes/.env fallback);
+    inject that same value when it's otherwise absent so agents authenticate instead of
+    failing on an empty key. An explicit key in the env is always respected.
+    """
+    env = dict(os.environ)
+    if not env.get("LITELLM_MASTER_KEY"):
+        key = litellm_key()
+        if key:
+            env["LITELLM_MASTER_KEY"] = key
+    return env
+
+
 def _profile_model(config_text: str) -> str:
     in_model = False
     for raw in config_text.splitlines():
@@ -1068,7 +1086,7 @@ class Handler(BaseHTTPRequestHandler):
             # multibyte progress glyphs (→ ▸ ✓ ⟳), and under launchd the locale's preferred
             # encoding may not be UTF-8 — a strict decode there would kill the whole live stream
             # on the first glyph. errors="replace" keeps the parse alive on any stray byte too.
-            proc = subprocess.Popen(cmd, cwd=str(REPO_ROOT), env=dict(os.environ),
+            proc = subprocess.Popen(cmd, cwd=str(REPO_ROOT), env=pipeline_subprocess_env(),
                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                     text=True, bufsize=1, encoding="utf-8", errors="replace")
         except Exception as e:
