@@ -1,0 +1,20 @@
+# debug-analyzer — symptom + code → ranked root-cause hypotheses + next probe (workflow Step 4)
+# Model: reasoning → qwen3.6:35b-mlx (21.9 GB) — the roster's dedicated reasoning slot. Root-
+# cause analysis (reason from a trace to falsifiable hypotheses, pick the highest-information
+# probe) is precisely the reasoning task this slot exists for. `reasoning` is today the same
+# qwen3.6:35b model as `max`. This is the local counterpart to superpowers:systematic-
+# debugging, invoked "when blocked."
+# NOTE: the project home disables ALL toolsets, so zero tools are sent — keeps the context
+# minimal. qwen3.6 routes thinking to a separate channel suppressed by show_reasoning:false;
+# strip_reasoning is an inert fallback.
+alias: reasoning
+provider: litellm
+max_turns: 4            # one-shot, or a short clarify for the missing repro detail
+toolsets: ""            # the trace + code are pasted/piped in — no file access
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: false  # multi-section Markdown analysis, not one line
+strip_think: false       # qwen3.6 routes thinking to a separate channel, off in config
+strip_reasoning: true    # inert fallback; config already suppresses the "┌─ Reasoning" block
+answer_anchor: "## Symptom"   # first heading of the analysis; cut anything before it
