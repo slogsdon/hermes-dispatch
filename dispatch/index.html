@@ -126,6 +126,9 @@
   .card:active { background:var(--panel2); }
   .card .top { display:flex; align-items:center; gap:8px; }
   .card .title { font-weight:650; font-size:16px; }
+  .card .del { margin-left:auto; flex:0 0 auto; background:transparent; border:0; color:var(--muted);
+    font-size:15px; padding:4px 6px; border-radius:0; line-height:1; cursor:pointer; }
+  .card .del:hover, .card .del:active { color:var(--text); }
   .card .mdl { margin-left:auto; color:var(--muted); font-size:11px; background:var(--panel2); border:1px solid var(--line); border-radius:999px; padding:2px 9px; white-space:nowrap; }
   .card .desc { color:var(--muted); font-size:13px; margin-top:4px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
   .card .meta { color:var(--muted); font-size:12px; margin-top:7px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
@@ -413,11 +416,19 @@ async function renderSessions() {
     const c = document.createElement("div"); c.className = "card";
     const icon = s.type === "direct" ? "📋" : s.type === "pipeline" ? "⛓" : "💬";
     const agents = (s.agents||[]).map(a => `<span class="tag agent">${esc(a)}</span>`).join("");
-    c.innerHTML = `<div class="top"><span class="title">${icon} ${esc(s.title)}</span></div>
+    c.innerHTML = `<div class="top"><span class="title">${icon} ${esc(s.title)}</span><button class="del" aria-label="Delete session">🗑</button></div>
       <div class="meta"><span>${esc(shortDate(s.updated_at))}</span><span class="tag">${s.turns} turns</span>${agents}</div>`;
     c.onclick = () => openSession(s.id);
+    c.querySelector(".del").onclick = (e) => { e.stopPropagation(); deleteSession(s.id, s.title); };
     el.appendChild(c);
   });
+}
+async function deleteSession(id, title) {
+  if (!confirm(`Delete session "${title || "(untitled)"}"? This can't be undone.`)) return;
+  try { await fetch("/delete-session", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ session_id: id }) }); }
+  catch (e) { alert("Delete failed: " + ((e && e.message) || e)); return; }
+  if (session && session.id === id) { session = null; pinned = null; localStorage.removeItem("hermes_sid"); }
+  renderSessions();
 }
 function newSessionBtn() {
   const b = document.createElement("button"); b.className = "newbtn"; b.textContent = "+ New dispatch session";

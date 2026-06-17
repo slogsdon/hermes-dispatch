@@ -193,6 +193,21 @@ def save_session(s: dict) -> None:
     tmp.replace(f)
 
 
+def delete_session(sid: str) -> bool:
+    """Delete a session file. Returns True if it existed and was removed."""
+    if not sid:
+        return False
+    with _hist_lock:
+        f = _sess_file(sid)
+        try:
+            if f.exists():
+                f.unlink()
+                return True
+        except OSError:
+            pass
+    return False
+
+
 def create_session(stype: str = "dispatch", agent: str | None = None,
                    pipeline: str | None = None) -> dict:
     now = datetime.datetime.now()
@@ -384,6 +399,94 @@ def migrate_legacy_history() -> None:
     except (OSError, ValueError):
         s["pinned"] = None
     save_session(s)
+
+
+# --------------------------------------------------------------------------- #
+# Orphan recovery — on startup, clear pipeline steps left `running` by a crashed
+# or restarted orchestrator so the UI doesn't show a phantom "running…" forever.
+# --------------------------------------------------------------------------- #
+def _utc_now() -> str:
+    """UTC timestamp in the same format orchestrate.sh writes (date -u +%Y-%m-%dT%H:%M:%SZ)."""
+    return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:      # exists but owned by another user
+        return True
+    return True
+
+
+def _orchestrator_alive(rd: Path) -> bool:
+    """True if a live orchestrator is driving run dir `rd`. bin/run-pipeline.sh writes its PID
+    to run/<id>/orchestrator.pid while a run is in flight and removes it on any clean exit, so a
+    present-and-live pidfile means work is genuinely running; a missing or stale (dead-pid) file
+    means the orchestrator is gone."""
+    try:
+        pid = int((rd / "orchestrator.pid").read_text().strip())
+    except (OSError, ValueError):
+        return False
+    return _pid_alive(pid)
+
+
+def recover_orphaned_pipelines() -> None:
+    """Startup sweep: clear pipeline steps left `running` by a crashed or restarted orchestrator.
+
+    If this server (or its orchestrator children) was killed mid-run — e.g. a launchd restart
+    tore the process group down between a step starting and finishing — state.json keeps a step
+    pinned at `running` and the UI shows a phantom "running…" forever. For every session marked
+    `pipeline_status=running`, we check the run's orchestrator pidfile: if no live process is
+    driving it, the still-`running` step was orphaned, so mark it `needs-human` (resumable; the
+    UI already understands this state) and pause the run. Genuinely-live runs are left untouched."""
+    if not SESSIONS_DIR.is_dir():
+        return
+    for sf in SESSIONS_DIR.glob("*.json"):
+        try:
+            sess = json.loads(sf.read_text())
+        except (OSError, ValueError):
+            continue
+        if sess.get("pipeline_status") != "running":
+            continue
+        sid = sess.get("id", "")
+        run_id = sess.get("pipeline_run_id") or ""
+        rd = RUN_ROOT / run_id
+        sjf = rd / "state.json"
+        if not run_id or not sjf.exists():
+            # Session says running but there's no run to verify — clear the phantom on the session.
+            set_session_meta(sid, pipeline_status="interrupted")
+            print(f"recover: session {sid} pipeline_status=running with no run dir → interrupted",
+                  file=sys.stderr)
+            continue
+        if _orchestrator_alive(rd):
+            continue                          # a real process is still driving this run
+        try:
+            state = json.loads(sjf.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        orphaned = [st for st in state.get("steps", []) if st.get("status") == "running"]
+        if not orphaned:
+            continue
+        for st in orphaned:
+            st["status"] = "needs-human"
+            st["ended_at"] = st.get("ended_at") or _utc_now()
+            st["interrupted"] = True
+            st["interrupted_reason"] = "orphaned by server/orchestrator restart"
+            print(f"recover: run {run_id} step '{st.get('id')}' orphaned "
+                  f"(no live orchestrator) → needs-human", file=sys.stderr)
+        if state.get("status") == "running":
+            state["status"] = "paused"
+        state["updated_at"] = _utc_now()
+        tmp = sjf.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(state, indent=2))
+        try:
+            tmp.chmod(sjf.stat().st_mode & 0o777)   # preserve the run state's mode (0600)
+        except OSError:
+            pass
+        tmp.replace(sjf)
+        set_session_meta(sid, pipeline_status="needs-human")
 
 
 # --------------------------------------------------------------------------- #
@@ -852,6 +955,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._pin_endpoint()
         if self.path == "/sessions":
             return self._create_session_endpoint()
+        if self.path == "/delete-session":
+            return self._delete_session_endpoint()
         if self.path == "/dispatch":
             return self._dispatch_endpoint()
         if self.path == "/run":
@@ -883,6 +988,17 @@ class Handler(BaseHTTPRequestHandler):
         else:
             agent = None
         return self._json(200, {"session": create_session(stype, agent, pipeline)})
+
+    def _delete_session_endpoint(self):
+        try:
+            payload = self._read_body()
+        except Exception:
+            return self._json(400, {"error": "bad request body"})
+        sid = str(payload.get("session_id", "")).strip()
+        if not sid:
+            return self._json(400, {"error": "session_id required"})
+        ok = delete_session(sid)
+        return self._json(200 if ok else 404, {"ok": ok})
 
     def _run_pipeline_endpoint(self):
         """Start an orchestrated pipeline (e.g. dev-workflow) for a pipeline session. Runs
@@ -1363,6 +1479,7 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     DISPATCH_HOME.mkdir(parents=True, exist_ok=True)
     migrate_legacy_history()
+    recover_orphaned_pipelines()
     if not INDEX.exists():
         print(f"warning: {INDEX} not found", file=sys.stderr)
     srv = ThreadingHTTPServer((HOST, PORT), Handler)

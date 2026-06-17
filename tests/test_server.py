@@ -14,6 +14,7 @@ and HERMES_ARTIFACTS_DIR at throwaway temp dirs BEFORE importing it.
 import atexit
 import importlib.util
 import io
+import json
 import os
 import shutil
 import tempfile
@@ -113,6 +114,79 @@ class TestReadBodyCap(unittest.TestCase):
 
     def test_empty_body_is_empty_dict(self):
         self.assertEqual(self._call(0, b""), {})
+
+
+class TestDeleteSession(unittest.TestCase):
+    """delete_session removes the file and is safe on missing/empty ids."""
+
+    def test_delete_existing_returns_true_and_removes(self):
+        s = srv.create_session("dispatch")
+        self.assertTrue(srv._sess_file(s["id"]).exists())
+        self.assertTrue(srv.delete_session(s["id"]))
+        self.assertFalse(srv._sess_file(s["id"]).exists())
+        self.assertIsNone(srv.load_session(s["id"]))
+
+    def test_delete_missing_returns_false(self):
+        self.assertFalse(srv.delete_session("no_such_session"))
+
+    def test_delete_empty_id_returns_false(self):
+        self.assertFalse(srv.delete_session(""))
+
+
+class TestRecoverOrphanedPipelines(unittest.TestCase):
+    """Startup sweep: a `running` step with no live orchestrator becomes needs-human."""
+
+    def setUp(self):
+        # Isolate BOTH run dir and sessions dir so the global startup sweep only
+        # sees this test's sessions (no bleed/noise from sibling tests).
+        self._run_root, self._sessions_dir = srv.RUN_ROOT, srv.SESSIONS_DIR
+        self._tmp = tempfile.mkdtemp(prefix="hermes_run_test_")
+        srv.RUN_ROOT = Path(self._tmp) / "run"
+        srv.SESSIONS_DIR = Path(self._tmp) / "sessions"
+        srv.SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
+
+    def tearDown(self):
+        srv.RUN_ROOT, srv.SESSIONS_DIR = self._run_root, self._sessions_dir
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    def _make_run(self, run_id, *, step_status="running", overall="running", pid=None):
+        rd = srv.RUN_ROOT / run_id
+        rd.mkdir(parents=True, exist_ok=True)
+        (rd / "state.json").write_text(json.dumps({
+            "status": overall,
+            "steps": [{"id": "build", "agent": "code-generator", "status": step_status}],
+        }))
+        if pid is not None:
+            (rd / "orchestrator.pid").write_text(str(pid))
+        return rd
+
+    def test_orphaned_running_step_becomes_needs_human(self):
+        s = srv.create_session("pipeline")
+        run_id = "rec_orphan_1"
+        rd = self._make_run(run_id)                      # no orchestrator.pid -> dead
+        srv.set_session_meta(s["id"], pipeline_status="running", pipeline_run_id=run_id)
+        srv.recover_orphaned_pipelines()
+        state = json.loads((rd / "state.json").read_text())
+        self.assertEqual(state["steps"][0]["status"], "needs-human")
+        self.assertTrue(state["steps"][0]["interrupted"])
+        self.assertEqual(state["status"], "paused")
+        self.assertEqual(srv.load_session(s["id"])["pipeline_status"], "needs-human")
+
+    def test_live_orchestrator_is_left_untouched(self):
+        s = srv.create_session("pipeline")
+        run_id = "rec_live_1"
+        rd = self._make_run(run_id, pid=os.getpid())     # our own pid is alive
+        srv.set_session_meta(s["id"], pipeline_status="running", pipeline_run_id=run_id)
+        srv.recover_orphaned_pipelines()
+        state = json.loads((rd / "state.json").read_text())
+        self.assertEqual(state["steps"][0]["status"], "running")
+        self.assertEqual(srv.load_session(s["id"])["pipeline_status"], "running")
+
+    def test_running_session_with_no_run_dir_is_interrupted(self):
+        s = srv.create_session("pipeline")
+        srv.set_session_meta(s["id"], pipeline_status="running", pipeline_run_id="ghost_run")
+        srv.recover_orphaned_pipelines()
+        self.assertEqual(srv.load_session(s["id"])["pipeline_status"], "interrupted")
 
 
 if __name__ == "__main__":
