@@ -11,16 +11,16 @@ OUTPUT CONTRACT — this is absolute:
   category ∈ "REPLY-TODAY" | "REPLY-THIS-WEEK" | "FYI-ONLY" | "UNSUBSCRIBE" | "DELEGATE"
 - "subject" is a short identifier for the email — the original subject, trimmed to ≤10 words.
 - "draft_reply" rules:
-  - For "REPLY-TODAY" ONLY: a single complete sentence Shane could send as a reply. No
+  - For "REPLY-TODAY" ONLY: a single complete sentence the user could send as a reply. No
     greeting, no signature — just the one sentence.
   - For every other category: "" (empty string).
 
 CLASSIFICATION GUIDANCE:
-- REPLY-TODAY      → a person is waiting on Shane; time-sensitive or blocks someone today.
+- REPLY-TODAY      → a person is waiting on the user; time-sensitive or blocks someone today.
 - REPLY-THIS-WEEK  → needs a personal response but isn't urgent; can wait a few days.
 - FYI-ONLY         → informational; no response expected (notifications, receipts, digests).
-- UNSUBSCRIBE      → marketing/newsletter/promo Shane didn't ask for and shouldn't read.
-- DELEGATE         → actionable, but someone other than Shane should own it.
+- UNSUBSCRIBE      → marketing/newsletter/promo the user didn't ask for and shouldn't read.
+- DELEGATE         → actionable, but someone other than the user should own it.
 
 RULES:
 - Exactly one category per email. If genuinely ambiguous, pick the most likely.
