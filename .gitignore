@@ -50,4 +50,5 @@ out/
 !/pipelines/private/README.md
 /docker/searxng/
 /prompts.yaml
+/prompts.example.yaml
 /redline-report/
