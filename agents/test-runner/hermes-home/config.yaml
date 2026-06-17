@@ -1,0 +1,85 @@
+# test-runner/hermes-home/config.yaml — per-agent home for the SHELL-ENABLED test-runner.
+# Identical to the shared project home (context-minimal: no persona, memory, skills, MCP,
+# reasoning render) EXCEPT the `terminal` toolset is left ENABLED so this one agent can run
+# shell commands to discover and execute tests in odd/non-standard projects. The runner
+# (lib/hermes-run.sh) detects this file and syncs it into a SEPARATE runtime home, so terminal
+# access is scoped to this agent only — every other agent still runs fully tool-free.
+#
+# Ground-truth note: even when this agent runs tests itself, the orchestrator re-executes the
+# discovered command via lib/test-runner.sh to capture the authoritative exit code — the model
+# never gets to self-report pass/fail. This agent's job is DISCOVERY of how to run an unusual
+# project's tests, not to be the source of truth.
+_config_version: 23
+
+model:
+  default: code
+  provider: litellm
+
+agent:
+  max_turns: 60
+  tool_use_enforcement: auto
+  reasoning_effort: medium
+  system_prompt: ''
+  personalities: {}
+  # Every built-in toolset disabled EXCEPT `terminal` (the shell tool this agent needs).
+  disabled_toolsets:
+  - web
+  - browser
+  - file
+  - code_execution
+  - vision
+  - video
+  - image_gen
+  - video_gen
+  - x_search
+  - moa
+  - tts
+  - skills
+  - todo
+  - memory
+  - session_search
+  - clarify
+  - delegation
+  - cronjob
+  - messaging
+  - homeassistant
+  - spotify
+  - yuanbao
+  - computer_use
+
+toolsets: [terminal]            # CLI allowlist: shell only
+
+display:
+  show_reasoning: false
+  personality: ''
+
+security:
+  tirith_enabled: false
+
+memory:
+  memory_enabled: false
+  user_profile_enabled: false
+
+delegation:
+  orchestrator_enabled: false
+
+skills:
+  external_dirs: []
+
+custom_providers:
+- name: litellm
+  base_url: http://localhost:4000/v1
+  key_env: LITELLM_MASTER_KEY
+  api_mode: chat_completions
+  models:
+    fast:            { context_length: 131072 }
+    balanced:        { context_length: 65536 }
+    max:             { context_length: 131072 }
+    structured:      { context_length: 64000 }
+    code:            { context_length: 65536 }
+    writing:         { context_length: 65536 }
+    reasoning:       { context_length: 64000 }
+    classify:        { context_length: 128000 }
+    reasoning-judge: { context_length: 64000 }
+    balanced-judge:  { context_length: 64000 }
+    max-judge:       { context_length: 64000 }

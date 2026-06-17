@@ -1,0 +1,19 @@
+# code-generator — implementation plan → actual runnable code (workflow Step 4, Build)
+# Model: code → qwen3-coder:30b (18.6 GB) — the roster's coding model, the same alias as
+# devrel-sample and test-designer. This agent does the real build work: it writes the
+# implementation from the spec the earlier stages produced (and revises it against review
+# findings in REFINE mode), emitting complete, runnable files — not a prompt for a human to
+# write code. The roster's coding model emits clean code under the project config
+# (show_reasoning:false suppresses any reasoning block); strip_reasoning is an inert
+# belt-and-braces fallback.
+alias: code
+provider: litellm
+max_turns: 2            # one-shot generation, with one turn of headroom for a long multi-file emit
+toolsets: ""            # the plan (and code+findings on refine) are piped in — no file access
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: false  # summary + fenced code blocks + notes, not one line
+strip_think: false       # the roster's coding model emits clean code; no inline think to cut
+strip_reasoning: true    # inert fallback; config's show_reasoning:false suppresses the block
+answer_anchor: "## Summary"   # first heading of the output; cut anything before it

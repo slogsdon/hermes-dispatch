@@ -38,9 +38,18 @@ shift || true
 # at run time. Override the runtime location with HERMES_AGENTS_HOME.
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$LIB_DIR")"
+# Default: the shared, context-minimal project home (all toolsets off). An agent that needs a
+# different home — e.g. the shell-enabled `test-runner`, whose own hermes-home enables the
+# `terminal` toolset — ships its OWN `hermes-home/config.yaml`; we sync that into a SEPARATE
+# runtime home so enabling a tool for one agent never turns it on for the others.
 PROJECT_HOME_SRC="$REPO_ROOT/hermes-home"
+RUNTIME_SUFFIX=""
+if [[ -f "$AGENT_DIR/hermes-home/config.yaml" ]]; then
+  PROJECT_HOME_SRC="$AGENT_DIR/hermes-home"
+  RUNTIME_SUFFIX="-$(basename "$AGENT_DIR")"
+fi
 if [[ -f "$PROJECT_HOME_SRC/config.yaml" && "${HERMES_AGENTS_NO_HOME:-}" != "1" ]]; then
-  RUNTIME_HOME="${HERMES_AGENTS_HOME:-$HOME/.cache/hermes-agents-home}"
+  RUNTIME_HOME="${HERMES_AGENTS_HOME:-$HOME/.cache/hermes-agents-home}${RUNTIME_SUFFIX}"
   mkdir -p "$RUNTIME_HOME"
   cp -f "$PROJECT_HOME_SRC/config.yaml" "$RUNTIME_HOME/config.yaml"
   [[ -f "$PROJECT_HOME_SRC/SOUL.md" ]] && cp -f "$PROJECT_HOME_SRC/SOUL.md" "$RUNTIME_HOME/SOUL.md"

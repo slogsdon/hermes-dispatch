@@ -1,0 +1,21 @@
+# security-reviewer — diff → OWASP-oriented security findings (workflow Step 5, hardening)
+# Model: max → qwen3.6:35b-mlx (21.9 GB). Security review is the one place the project has
+# HARD EVIDENCE that a small model is dangerous: in testing, granite4.1:8b (the `balanced`
+# alias) INVERTED a security finding — it endorsed a timing-unsafe comparison and approved a
+# diff that should have been blocked (see pr-reviewer's README). A security gate that gives
+# false assurance is worse than none, so this earns the strongest local reasoner. This is the
+# local counterpart to agent-skills:security-and-hardening — the explicit gap the workflow
+# names that pr-reviewer's single security axis doesn't cover in depth.
+# qwen3.6 routes thinking to a separate channel, so output stays clean under show_reasoning:
+# false; strip_reasoning + answer_anchor are a belt-and-braces fallback.
+alias: max
+provider: litellm
+max_turns: 1            # judge once over the pasted diff; no tools, no loop
+toolsets: ""            # diff is piped/pasted in — no file access needed
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: false
+strip_think: false
+strip_reasoning: true    # fallback; config already suppresses the reasoning block
+answer_anchor: "## Verdict"   # first heading of the review; cut anything before it

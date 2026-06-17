@@ -1,0 +1,19 @@
+# direction-explorer — brief → framed problem + ranked directions + a pick (workflow Step 2)
+# Model: reasoning → qwen3.6:35b-mlx (21.9 GB) — the roster's dedicated reasoning slot.
+# Brainstorming is a diverge-then-converge reasoning task (generate distinct bets, then
+# judge and commit), which is exactly what the reasoning slot is for. `reasoning` is today
+# the same qwen3.6:35b model as `max`.
+# NOTE: the project home disables ALL toolsets, so zero tools are sent — keeps the context
+# minimal. qwen3.6 routes thinking to a separate channel that show_reasoning:false suppresses;
+# strip_reasoning + answer_anchor are an inert belt-and-braces fallback.
+alias: reasoning
+provider: litellm
+max_turns: 6            # interactive diverge/converge, or a one-shot pass
+toolsets: ""            # the brief is pasted/piped in — no fetching
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: false  # multi-section Markdown, not one line
+strip_think: false       # qwen3.6 routes thinking to a separate channel, off in config
+strip_reasoning: true    # inert fallback; config already suppresses the "┌─ Reasoning" block
+answer_anchor: "## Problem Frame"   # first heading of the output; cut anything before it

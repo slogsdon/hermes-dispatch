@@ -1,0 +1,124 @@
+{
+  "name": "dev-workflow",
+  "description": "The full idea→spec→tests→code→validated-solution cycle as an automated agent pipeline (mirrors Context/Development Workflow). Runs the planning spine — feature-brief → direction-explorer → impl-planner — then HALTS at the single human gate `spec-approval` (approve the plan before we write code). Resume with `bin/run-pipeline.sh --resume <run-id>` and the rest runs through agents: TDD order (test-designer writes the tests FIRST) → code-generator writes the implementation → the `validate` test-loop ACTUALLY RUNS the tests (unit → integration → Playwright, ground-truth pass/fail from real exit codes via lib/test-runner.sh) and on failure feeds the real failures back to code-generator for revision, looping up to max_cycles before escalating to human review → pr-reviewer and security-reviewer review the test-passing code → release-prep and pr-describer produce the ship artifacts. Step `type`: agent (default) | gate (the one human decision point) | test-loop (deterministic test execution + auto-fix revision loop). `reads` may be an array (concatenated, labeled).",
+  "steps": [
+    {
+      "id": "brief",
+      "type": "agent",
+      "agent": "feature-brief",
+      "reads": "input",
+      "writes": "brief",
+      "format": "md",
+      "stage": "1 — Business Context (/biz-brief)",
+      "note": "max (qwen3.6) — raw idea → persona, opportunity, monetization, KPIs, GTM angle, business risks"
+    },
+    {
+      "id": "directions",
+      "type": "agent",
+      "agent": "direction-explorer",
+      "reads": "brief",
+      "writes": "directions",
+      "format": "md",
+      "stage": "2 — Brainstorm (superpowers:brainstorming)",
+      "note": "reasoning (deepseek-r1) — brief → framed problem + distinct directions + a recommended pick & thinnest first slice"
+    },
+    {
+      "id": "plan",
+      "type": "agent",
+      "agent": "impl-planner",
+      "reads": "directions",
+      "writes": "plan",
+      "format": "md",
+      "stage": "3 — Plan (superpowers:writing-plans)",
+      "note": "max (qwen3.6) — chosen direction → ordered, testable tasks (files, commands, TDD step, Done-when) + checkpoints + risks. This is the SPEC."
+    },
+    {
+      "id": "spec-approval",
+      "type": "gate",
+      "gate": "THE ONE HUMAN GATE — approve the spec before we write code. A human reviews the plan (and confirms the recommended direction, or re-runs `directions`/`plan` with an override). Once approved, resume and the entire TDD→build→test→ship cycle runs through agents: bin/run-pipeline.sh --resume <run-id>",
+      "stage": "Gate — approve spec before code"
+    },
+    {
+      "id": "tests",
+      "type": "agent",
+      "agent": "test-designer",
+      "reads": "plan",
+      "writes": "tests",
+      "format": "md",
+      "stage": "4 — Build (TDD: tests FIRST)",
+      "note": "code (qwen2.5-coder) — approved spec → the failing tests, written BEFORE the implementation, as path-tagged files the runner can write to disk and execute."
+    },
+    {
+      "id": "test-audit",
+      "type": "agent",
+      "agent": "test-auditor",
+      "reads": ["plan", "tests"],
+      "writes": "tests_audited",
+      "format": "md",
+      "stage": "5 — Validate (audit tests before code)",
+      "note": "max (qwen3.6) — reviews the generated tests against the spec and corrects WRONG expected values BEFORE code is written (re-derives computed literals as runtime expressions, not new magic numbers). Guards against a bad test poisoning the loop. Reads [plan, tests]."
+    },
+    {
+      "id": "code",
+      "type": "agent",
+      "agent": "code-generator",
+      "reads": ["plan", "tests_audited"],
+      "writes": "code",
+      "format": "md",
+      "stage": "4 — Build (implementation)",
+      "note": "code (qwen2.5-coder) — spec + the audited tests → the actual implementation written to satisfy those tests (real runnable files). Reads [plan, tests_audited] via multi-key read."
+    },
+    {
+      "id": "validate",
+      "type": "test-loop",
+      "agent": "code-generator",
+      "reads": "code",
+      "tests": "tests_audited",
+      "writes": "validated",
+      "max_cycles": 5,
+      "format": "md",
+      "stage": "5 — Validate (REAL test execution + revision loop)",
+      "note": "ORCHESTRATOR (lib/test-runner.sh) extracts code+tests to run/<id>/workspace/ and ACTUALLY RUNS them — unit → integration → Playwright, each gated on the prior passing, ground-truth pass/fail from real exit codes (the model never self-reports). On failure it feeds the real failure output back to code-generator (REFINE) and re-runs, up to max_cycles (5) revision cycles; still red ⇒ pause for human review. Per-cycle, per-layer results + revision count recorded in state.json. The shell-enabled test-runner agent is the opt-in discovery fallback (TEST_RUNNER_DISCOVER=1) for non-standard projects. Output `validated` = the test-passing code."
+    },
+    {
+      "id": "review",
+      "type": "agent",
+      "agent": "pr-reviewer",
+      "reads": "validated",
+      "writes": "review",
+      "format": "md",
+      "stage": "5 — Validate (superpowers:requesting-code-review)",
+      "note": "max (qwen3.6) — the TEST-PASSING code → five-axis verdict + severity-tagged findings. Runs on validated code, so review focuses on design/quality, not correctness the tests already cover. EXISTING agent, reused."
+    },
+    {
+      "id": "security",
+      "type": "agent",
+      "agent": "security-reviewer",
+      "reads": "validated",
+      "writes": "security",
+      "format": "md",
+      "stage": "5 — Validate (agent-skills:security-and-hardening)",
+      "note": "max (qwen3.6) — the test-passing code → OWASP-oriented security gate (PASS / PASS WITH NOTES / BLOCK)."
+    },
+    {
+      "id": "release",
+      "type": "agent",
+      "agent": "release-prep",
+      "reads": "validated",
+      "writes": "release",
+      "format": "md",
+      "stage": "6 — Ship (agent-skills:shipping-and-launch)",
+      "note": "max (qwen3.6) — the validated implementation → pre-flight checklist + monitoring/rollback + launch risks + go/no-go."
+    },
+    {
+      "id": "describe",
+      "type": "agent",
+      "agent": "pr-describer",
+      "reads": "validated",
+      "writes": "pr",
+      "format": "md",
+      "stage": "6 — Ship (superpowers:finishing-a-development-branch)",
+      "note": "writing (gpt-oss) — the validated implementation → PR title + summary + changes + test plan + risk/rollout. The human opens/merges the PR with this body."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+# test-designer — task/behavior → failing tests first (workflow Step 4, TDD red step)
+# Model: code → qwen3-coder:30b (18.6 GB) — the roster's coding model. Writing runnable test
+# code (correct imports, idiomatic framework, real assertions) is a code-generation task, so
+# it routes to the coder rather than a prose or reasoning model. Same alias as devrel-sample.
+# This is the local counterpart to superpowers:test-driven-development's red step: write the
+# test that fails before the implementation exists.
+alias: code
+provider: litellm
+max_turns: 3            # one-shot, or a short clarify (language/framework) before writing
+toolsets: ""            # the task/spec is pasted/piped in — no file access
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: false  # plan + a fenced code block + run command, not one line
+strip_think: false       # the roster's coding model emits clean code; no inline think to cut
+strip_reasoning: true    # inert fallback; config's show_reasoning:false suppresses the block
+answer_anchor: "## Test Plan"   # first heading of the output; cut anything before it
