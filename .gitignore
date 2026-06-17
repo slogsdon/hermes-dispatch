@@ -48,7 +48,7 @@ out/
 /pipelines/private/*
 !/pipelines/private/.gitkeep
 !/pipelines/private/README.md
-/docker/searxng/
+/docker/searxng
 /prompts.yaml
 /prompts.example.yaml
 /redline-report/
