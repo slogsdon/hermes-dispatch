@@ -58,6 +58,10 @@ DISPATCHER_MODEL = os.environ.get("HERMES_DISPATCHER_MODEL", "reasoning")
 # Two-tier dispatch: a fast model routes/classifies, a capable model expands the prompt.
 ROUTER_MODEL = os.environ.get("HERMES_ROUTER_MODEL", "structured")
 ENHANCER_MODEL = os.environ.get("HERMES_ENHANCER_MODEL", DISPATCHER_MODEL)
+# Routing fallback: a second, capable model that retries routing when ROUTER_MODEL
+# fails to pick a valid agent. Kept SEPARATE from ENHANCER_MODEL so the enhancer can
+# be set to a fast/small model without weakening the routing fallback.
+ROUTER_FALLBACK_MODEL = os.environ.get("HERMES_ROUTER_FALLBACK_MODEL", DISPATCHER_MODEL)
 HISTORY_CONTEXT_TURNS = 20
 
 # Artifacts, shared store so Hermes desktop can pick them up. Default under
@@ -852,9 +856,9 @@ def _convo(history: list) -> str:
 
 
 def route_request(message: str, profiles: dict, history: list) -> dict:
-    """Tier 1, router. Returns {agent, intent_summary, domain}. Tries the fast model
-    first; if it doesn't yield a valid agent (small models sometimes answer instead of
-    routing), falls back to the capable model."""
+    """Tier 1, router. Returns {agent, intent_summary, domain}. Tries the fast router
+    model first; if it doesn't yield a valid agent (small models sometimes answer
+    instead of routing), falls back to the capable ROUTER_FALLBACK_MODEL."""
     roster = "\n".join(f"- {n}: {p['desc'][:70]}" for n, p in profiles.items())
     system = (
         "You are a request router. Do NOT answer or perform the user's request, only "
@@ -865,7 +869,7 @@ def route_request(message: str, profiles: dict, history: list) -> dict:
         "No prose, no code, no fences.\n\n"
         f"AGENTS:\n{roster}\n\n" + _convo(history)
     )
-    for model in (ROUTER_MODEL, ENHANCER_MODEL):
+    for model in (ROUTER_MODEL, ROUTER_FALLBACK_MODEL):
         try:
             obj = _extract_json(_model_content(model, system, message, 200)) or {}
         except Exception:
