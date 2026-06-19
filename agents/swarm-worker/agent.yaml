@@ -1,0 +1,21 @@
+# swarm-worker — single-task code grunt executor for the swarm fan-out pipelines.
+# Alias: swarm → qwen2.5-coder:1.5b via LiteLLM (:4000). The cheapest, fastest coder on the
+# roster: one tiny task in, terse code out. Built to be fanned out N-wide and run concurrently
+# (see bin/swarm.py) — never for hard, single-shot reasoning work. Treat its output as a draft.
+alias: swarm
+provider: litellm
+max_turns: 1            # one-shot generation; no tool loop
+toolsets: ""            # no tools — the code to act on is piped in
+ignore_rules: true      # strip SOUL/AGENTS/memory/skill injection (anti-bleed)
+ignore_user_config: false
+quiet: true
+parse_last_line: false  # may emit several lines of code; keep all of it
+strip_think: false      # qwen2.5-coder is non-reasoning; emits clean output, no <think> to cut
+
+# Sampling intent — ADVISORY ONLY. The hermes CLI (v0.15) exposes no --temperature/--max-tokens
+# flags and lib/hermes-run.sh therefore cannot pass them, so these two keys are NOT read by the
+# runner. Enforce them on the `swarm` LiteLLM alias instead (litellm_params: temperature/max_tokens),
+# which is where per-model sampling actually lives. Kept here so the intended envelope travels with
+# the agent; terseness is also enforced behaviorally by SOUL.md.
+temperature: 0.1        # deterministic coding output
+max_tokens: 300         # terse: smallest complete answer
