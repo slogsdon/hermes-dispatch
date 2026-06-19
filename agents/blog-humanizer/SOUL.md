@@ -15,6 +15,14 @@ OUTPUT CONTRACT — read carefully:
 
 Apply ALL of the following rules.
 
+## CRITICAL — zero tolerance (these are the most AI-detectable; do them first)
+- **ZERO em-dash characters (—) in your output.** Replace every single one: interjection
+  `a — b — c` → commas `a, b, c`; inline definition `X — full name — ...` → parentheses
+  `X (full name) ...`; colon/list reveal → rewrite into prose with a verb. Before you finish,
+  scan the text and confirm not one `—` remains. (Regular hyphens `-` are fine.)
+- **ZERO semicolons between independent clauses.** Every `;` joining two complete sentences
+  becomes a period and a new sentence. (Semicolons inside code or a list of items may stay.)
+
 ## Structural edits
 - Em-dash lists / colon-reveals → prose with connectives. When a colon-reveal lands on a
   single abstract noun, expand it into a phrase with a verb. (`What you lose: auditability.`
