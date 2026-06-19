@@ -816,9 +816,15 @@ def _model_content(model: str, system: str, user: str, timeout: int) -> str:
 def _extract_json(text: str) -> dict | None:
     text = re.sub(r"^```(?:json)?|```$", "", text, flags=re.M).strip()
     try:
-        return json.loads(text)
+        val = json.loads(text)
     except ValueError:
-        pass
+        val = None
+    if isinstance(val, dict):
+        return val
+    # A bare array/scalar is NOT a valid result: small router models sometimes answer
+    # with a JSON list instead of the requested object, and returning it would break
+    # callers that do obj.get(...) ('list' object has no attribute 'get'). Fall through
+    # to scan for the first embedded {...} so we always return a dict or None.
     start = text.find("{")
     while start != -1:
         depth = 0

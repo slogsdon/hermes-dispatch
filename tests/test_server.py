@@ -233,5 +233,39 @@ class TestRecoverOrphanedPipelines(unittest.TestCase):
         self.assertEqual(srv.load_session(s["id"])["pipeline_status"], "interrupted")
 
 
+class TestExtractJson(unittest.TestCase):
+    """_extract_json must return a dict or None — never a list. A bare JSON array
+    from a small router model used to slip through and crash route_request with
+    'list' object has no attribute 'get'."""
+
+    def test_plain_object(self):
+        self.assertEqual(srv._extract_json('{"agent": "x"}'), {"agent": "x"})
+
+    def test_fenced_object(self):
+        self.assertEqual(srv._extract_json('```json\n{"agent": "x"}\n```'), {"agent": "x"})
+
+    def test_object_embedded_in_prose(self):
+        self.assertEqual(srv._extract_json('sure: {"agent": "x"} done'), {"agent": "x"})
+
+    def test_bare_array_returns_none_not_list(self):
+        out = srv._extract_json('["blog-drafter", "code-generator"]')
+        self.assertNotIsInstance(out, list)
+        self.assertIsNone(out)
+
+    def test_array_of_objects_recovers_first_object(self):
+        # Small models sometimes wrap the routing object in an array; recover it.
+        self.assertEqual(srv._extract_json('[{"agent": "x"}]'), {"agent": "x"})
+
+    def test_scalar_and_garbage_return_none(self):
+        self.assertIsNone(srv._extract_json("42"))
+        self.assertIsNone(srv._extract_json("not json at all"))
+
+    def test_result_is_safe_for_dotget(self):
+        # The exact crash site: (_extract_json(...) or {}).get("agent") must not raise.
+        for text in ('["a","b"]', "42", "garbage", '{"agent": "x"}'):
+            obj = srv._extract_json(text) or {}
+            obj.get("agent", "")  # would raise AttributeError if a list leaked through
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
