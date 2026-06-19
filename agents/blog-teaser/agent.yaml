@@ -1,0 +1,11 @@
+# blog-teaser — generate humanized LinkedIn/Twitter/Bluesky teasers for a published
+# article. Minimal agent: inputs piped in, ONE JSON line out. The blog-publisher shell
+# merges slug/url/format and writes the teasers file; buffer_schedule.py posts them.
+alias: writing
+provider: litellm
+max_turns: 1
+toolsets: ""
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: true    # guarantee a single JSON line on stdout

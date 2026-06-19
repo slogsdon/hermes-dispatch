@@ -1,0 +1,10 @@
+# blog-hero — generate a brand design artifact (HTML) for the blog pipeline.
+# Minimal agent: design system + metadata piped in, complete HTML printed out.
+alias: writing
+provider: litellm
+max_turns: 1
+toolsets: ""
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: false

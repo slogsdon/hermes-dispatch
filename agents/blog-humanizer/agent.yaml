@@ -1,0 +1,11 @@
+# blog-humanizer — voice/humanize + MS-style copy editor for the blog pipeline.
+# Minimal agent: no tools, one shot. The body is piped IN; the edited body is the
+# only thing printed OUT. The blog-publisher shell writes it back into the article.
+alias: writing
+provider: litellm
+max_turns: 1            # one-shot transform; no tools, no loop
+toolsets: ""            # no tools — content is piped in, edited text piped out
+ignore_rules: true      # no vault/skill persona injection — voice is set in SOUL
+ignore_user_config: false
+quiet: true
+parse_last_line: false
