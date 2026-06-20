@@ -1,0 +1,12 @@
+# blog-describer — write a meta description for a blog article when the source
+# note omits one. Minimal agent: the article body is piped IN; ONE line of plain
+# text (the description) is printed OUT. The blog-publisher shell writes it into
+# the article frontmatter.
+alias: writing
+provider: litellm
+max_turns: 1            # one-shot transform; no tools, no loop
+toolsets: ""            # no tools — body piped in, description piped out
+ignore_rules: true      # no vault/skill persona injection — voice is set in SOUL
+ignore_user_config: false
+quiet: true
+parse_last_line: true   # guarantee a single line on stdout
