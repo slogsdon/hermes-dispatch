@@ -856,6 +856,20 @@ def _convo(history: list) -> str:
         for i, t in enumerate(recent)) + "\n\n"
 
 
+def _last_result(history: list) -> str:
+    """Compact tail of the most recent agent output. The router otherwise sees only
+    `user_input -> agent_selected` per turn, so a follow-up like "implement it" after a
+    plan looks like a fresh planning request and re-routes to the same agent forever.
+    Showing the last result lets the router ADVANCE the workflow to the agent that
+    consumes it (a plan -> the coder) instead of re-invoking its producer."""
+    for t in reversed(history):
+        resp = (t.get("agent_response") or "").strip()
+        if resp:
+            return (f"MOST RECENT RESULT, already produced by the '{t.get('agent_selected','?')}' "
+                    f"agent:\n{resp[:ROUTER_PINNED_MAX]}\n\n")
+    return ""
+
+
 def route_request(message: str, profiles: dict, history: list,
                   pinned: dict | None = None) -> dict:
     """Tier 1, router. Returns {agent, intent_summary, domain}. Tries the fast router
@@ -872,11 +886,15 @@ def route_request(message: str, profiles: dict, history: list,
     system = (
         "You are a request router. Do NOT answer or perform the user's request, only "
         "route it. Pick the single best agent from the list for the user's latest request "
-        'and classify it. Respond with ONLY a JSON object: {"agent": "<exact name from the '
+        "and classify it. If a MOST RECENT RESULT is shown below and the user is asking to "
+        "act on, execute, build, or otherwise advance it, route to the agent that CONSUMES "
+        "that result to move the workflow forward (e.g. an implementation plan -> the agent "
+        "that writes the code) — do NOT re-pick the agent that just produced it. "
+        'Respond with ONLY a JSON object: {"agent": "<exact name from the '
         'list>", "intent_summary": "<one sentence: what the user wants>", "domain": "<one '
         'of: sales, ops, writing, code, research, legal, finance, productivity, other>"}. '
         "No prose, no code, no fences.\n\n"
-        f"AGENTS:\n{roster}\n\n" + pinned_block + _convo(history)
+        f"AGENTS:\n{roster}\n\n" + pinned_block + _last_result(history) + _convo(history)
     )
     for model in (ROUTER_MODEL, ROUTER_FALLBACK_MODEL):
         try:
