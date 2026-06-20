@@ -1,6 +1,7 @@
 # social-media-marketer, topic/draft → platform-tailored social posts.
-# Alias: fast, fast tier, quick and lightweight.
-alias: fast
+# Alias: writing, brand-facing prose — same prose-tuned model as the blog/proposal agents
+# (was `fast`; bumped 2026-06-20 — social copy is brand-facing, the weakest tier under-served it).
+alias: writing
 provider: litellm
 max_turns: 1
 toolsets: ""
