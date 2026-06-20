@@ -79,6 +79,6 @@ custom_providers:
     # task roles
     structured: { context_length: 64000 }
     code:       { context_length: 65536 }
-    writing:    { context_length: 131072 }
+    writing:    { context_length: 65536 }
     reasoning:  { context_length: 64000 }
   # >>> END GENERATED — do not add hand edits inside this block <<<
