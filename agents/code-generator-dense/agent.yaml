@@ -1,0 +1,18 @@
+# code-generator-dense — last-resort heavy builder for the dev-workflow validate loop.
+# Model: dense → qwen3.6-27b (dense, 64K ctx). Identical role to `code-generator` but a
+# DIFFERENT architecture/model. Used ONLY when the fast `code-generator` (qwen3-coder)
+# exhausts the test-loop's max_cycles still-red: bench (2026-06-20) showed qwen3-coder can
+# plateau below correctness on hard, reasoning-heavy code even WITH a test-feedback loop
+# (5/24 after 4 rounds), while dense one-shot the same task (24/24). dense is ~6x slower, so
+# it runs only on that rare plateau, as a final attempt before the human gate.
+alias: dense
+provider: litellm
+max_turns: 2            # one-shot generation, with one turn of headroom for a long multi-file emit
+toolsets: ""            # the plan (and code+findings on refine) are piped in — no file access
+ignore_rules: true
+ignore_user_config: false
+quiet: true
+parse_last_line: false  # summary + fenced code blocks + notes, not one line
+strip_think: false       # dense emits clean code (litellm_think:false on the alias)
+strip_reasoning: true    # inert fallback; config's show_reasoning:false suppresses the block
+answer_anchor: "## Summary"   # first heading of the output; cut anything before it

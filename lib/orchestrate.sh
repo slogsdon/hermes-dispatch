@@ -140,12 +140,19 @@ state_step_status() {
 pipeline_test_loop() {
   local rd="$1" step="$2"
   local id agent code_key tests_key writes maxc ws cycle results ok code_file tests_file infile fixfile
+  local esc_agent esc_cycles escalated=0
   id="$(echo "$step"      | jq -r .id)"
   agent="$(echo "$step"   | jq -r .agent)"
   code_key="$(echo "$step"| jq -r .reads)"
   tests_key="$(echo "$step"| jq -r '.tests // empty')"
   writes="$(echo "$step"  | jq -r .writes)"
   maxc="$(echo "$step"    | jq -r '.max_cycles // 5')"
+  # Optional escalation: when the fast builder exhausts max_cycles still-red, swap to a
+  # heavier (different-architecture) builder for `escalation_cycles` more rounds before the
+  # human gate. qwen3-coder can plateau below correctness on hard tasks even with the loop;
+  # a one-shot-correct dense builder gets a final shot first. See agents/code-generator-dense.
+  esc_agent="$(echo "$step"  | jq -r '.escalation_agent // empty')"
+  esc_cycles="$(echo "$step" | jq -r '.escalation_cycles // 2')"
   # Workspace placement. Default: under the run dir. When sandboxing the validate loop
   # (HERMES_SANDBOX_USER set), run untrusted model code in a world-traversable throwaway base
   # OUTSIDE the user's home tree, and grant ONLY the sandbox user access to that workspace
@@ -205,6 +212,15 @@ pipeline_test_loop() {
       return 0
     fi
     if [ "$cycle" -ge "$maxc" ]; then
+      # Escalation: hand the still-red build to the heavy builder for a few more cycles
+      # before pausing for a human. Different architecture → can clear bugs the fast builder
+      # kept reproducing. Falls through to the REFINE block below with the new agent.
+      if [ -n "$esc_agent" ] && [ "$escalated" = 0 ]; then
+        escalated=1
+        agent="$esc_agent"
+        maxc=$((cycle + esc_cycles))
+        echo "  ⤴ $id: fast builder exhausted — escalating to heavy builder '$agent' for $esc_cycles more cycle(s) before human review" >&2
+      else
       # When most tests pass and only a small, STABLE set keeps failing across cycles, the
       # likeliest cause is an INCORRECT TEST (e.g. a wrong hardcoded expected value), not code
       # the model can't write. Surface that to the human gate instead of just "still red".
@@ -224,6 +240,7 @@ pipeline_test_loop() {
         echo "   ⚠ ${up} passing / ${uf} failing held steady — the persistent failure(s) may be INCORRECT TESTS, not bad code. Review the test before the code: $suspects" >&2
       fi
       return 2
+      fi
     fi
 
     # Feed the real failures back to the fixer (REFINE): code + tests + failing-layer excerpts.

@@ -52,7 +52,10 @@
       "id": "test-audit",
       "type": "agent",
       "agent": "test-auditor",
-      "reads": ["plan", "tests"],
+      "reads": [
+        "plan",
+        "tests"
+      ],
       "writes": "tests_audited",
       "format": "md",
       "stage": "5 — Validate (audit tests before code)",
@@ -62,7 +65,10 @@
       "id": "code",
       "type": "agent",
       "agent": "code-generator",
-      "reads": ["plan", "tests_audited"],
+      "reads": [
+        "plan",
+        "tests_audited"
+      ],
       "writes": "code",
       "format": "md",
       "stage": "4 — Build (implementation)",
@@ -78,7 +84,9 @@
       "max_cycles": 5,
       "format": "md",
       "stage": "5 — Validate (REAL test execution + revision loop)",
-      "note": "ORCHESTRATOR (lib/test-runner.sh) extracts code+tests to run/<id>/workspace/ and ACTUALLY RUNS them — unit → integration → Playwright, each gated on the prior passing, ground-truth pass/fail from real exit codes (the model never self-reports). On failure it feeds the real failure output back to code-generator (REFINE) and re-runs, up to max_cycles (5) revision cycles; still red ⇒ pause for human review. Per-cycle, per-layer results + revision count recorded in state.json. The shell-enabled test-runner agent is the opt-in discovery fallback (TEST_RUNNER_DISCOVER=1) for non-standard projects. Output `validated` = the test-passing code."
+      "note": "ORCHESTRATOR (lib/test-runner.sh) extracts code+tests to run/<id>/workspace/ and ACTUALLY RUNS them — unit → integration → Playwright, each gated on the prior passing, ground-truth pass/fail from real exit codes (the model never self-reports). On failure it feeds the real failure output back to code-generator (REFINE) and re-runs, up to max_cycles (5) revision cycles; still red ⇒ pause for human review. Per-cycle, per-layer results + revision count recorded in state.json. The shell-enabled test-runner agent is the opt-in discovery fallback (TEST_RUNNER_DISCOVER=1) for non-standard projects. Output `validated` = the test-passing code. ESCALATION: if the fast builder (code-generator) exhausts max_cycles still-red, the loop swaps to code-generator-dense (alias dense, a different architecture) for escalation_cycles(2) more cycles before pausing for human review — qwen3-coder can plateau below correctness on hard tasks even with the test loop, where a one-shot-correct dense builder clears it.",
+      "escalation_agent": "code-generator-dense",
+      "escalation_cycles": 2
     },
     {
       "id": "review",
