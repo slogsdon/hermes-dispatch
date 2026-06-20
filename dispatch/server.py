@@ -78,6 +78,7 @@ OBSIDIAN_ENABLED = bool(_VAULT_ENV)
 VAULT = Path(_VAULT_ENV).expanduser() if _VAULT_ENV else None
 OBSIDIAN_BIN = os.environ.get("OBSIDIAN_BIN") or shutil.which("obsidian") or "obsidian"
 PINNED_CONTEXT_MAX = 4000   # chars of pinned artifact shown to the dispatcher
+ROUTER_PINNED_MAX = 1200    # chars of pinned artifact shown to the router (just enough to route)
 # Titling a note is trivial, use a fast model, not the slow r1 dispatcher.
 TITLE_MODEL = os.environ.get("HERMES_TITLE_MODEL", "structured")
 
@@ -855,11 +856,19 @@ def _convo(history: list) -> str:
         for i, t in enumerate(recent)) + "\n\n"
 
 
-def route_request(message: str, profiles: dict, history: list) -> dict:
+def route_request(message: str, profiles: dict, history: list,
+                  pinned: dict | None = None) -> dict:
     """Tier 1, router. Returns {agent, intent_summary, domain}. Tries the fast router
     model first; if it doesn't yield a valid agent (small models sometimes answer
     instead of routing), falls back to the capable ROUTER_FALLBACK_MODEL."""
     roster = "\n".join(f"- {n}: {p['desc'][:70]}" for n, p in profiles.items())
+    pinned_block = ""
+    if pinned and pinned.get("content"):
+        pinned_block = (
+            f"The user's latest request refers to ATTACHED CONTEXT, output from a previous "
+            f"'{pinned.get('agent','')}' run; route based on what they want done with it:\n"
+            f"{pinned['content'][:ROUTER_PINNED_MAX]}\n\n"
+        )
     system = (
         "You are a request router. Do NOT answer or perform the user's request, only "
         "route it. Pick the single best agent from the list for the user's latest request "
@@ -867,7 +876,7 @@ def route_request(message: str, profiles: dict, history: list) -> dict:
         'list>", "intent_summary": "<one sentence: what the user wants>", "domain": "<one '
         'of: sales, ops, writing, code, research, legal, finance, productivity, other>"}. '
         "No prose, no code, no fences.\n\n"
-        f"AGENTS:\n{roster}\n\n" + _convo(history)
+        f"AGENTS:\n{roster}\n\n" + pinned_block + _convo(history)
     )
     for model in (ROUTER_MODEL, ROUTER_FALLBACK_MODEL):
         try:
@@ -1373,7 +1382,7 @@ class Handler(BaseHTTPRequestHandler):
                         return push({"type": "error", "message": f"unknown agent '{agent}'"})
                     intent, domain, expanded = "", "", message
                 else:
-                    r = route_request(message, profiles, prior)                       # Tier 1
+                    r = route_request(message, profiles, prior, pinned)                # Tier 1
                     agent, intent, domain = r["agent"], r["intent_summary"], r["domain"]
                     expanded = enhance_prompt(message, profiles, prior, agent,         # Tier 2
                                               intent, domain, pinned)
