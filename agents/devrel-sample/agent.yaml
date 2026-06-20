@@ -1,10 +1,13 @@
 # devrel-sample, developer-advocacy code sample generator.
-# Alias: code, code role.
-alias: code
+# Alias: dense — one-shot generation with NO execution/test loop, so first-pass correctness
+# matters most (brand-facing sample code). Bench (2026-06-20): on one-shot multi-file codegen
+# `dense` scored 24/24 vs `code` 0/24; `code` is for iterative tool/test-driven loops, not this.
+# Trade: dense is ~6x slower, acceptable for batch sample generation.
+alias: dense
 provider: litellm
 max_turns: 1            # one-shot generation; no tool loop
 toolsets: ""            # no tools, generate from the spec you paste in
 ignore_rules: true      # strip SOUL/AGENTS/memory/skill injection (anti-bleed)
 ignore_user_config: false
 quiet: true
-parse_last_line: false  # the code model is non-reasoning; emits clean output
+parse_last_line: false  # dense emits clean output (litellm_think:false on the alias)
