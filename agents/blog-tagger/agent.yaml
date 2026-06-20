@@ -1,0 +1,11 @@
+# blog-tagger — pick topic tags for a blog article from a fixed taxonomy. Minimal
+# agent: a brief (allowed tags + title + body) is piped IN; ONE line of comma-separated
+# tag slugs is printed OUT. The blog-publisher shell validates and writes them.
+alias: writing
+provider: litellm
+max_turns: 1            # one-shot selection; no tools, no loop
+toolsets: ""            # no tools — brief piped in, slugs piped out
+ignore_rules: true      # no vault/skill persona injection
+ignore_user_config: false
+quiet: true
+parse_last_line: true   # guarantee a single line on stdout
